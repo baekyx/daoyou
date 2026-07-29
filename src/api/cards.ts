@@ -209,7 +209,7 @@ export async function fetchKcPageForPush(
   if (search) query = query.ilike("title_cn", `%${search}%`);
 
   const { data, error } = await query;
-  if (error) return { cards: [], hasMore: false };
+  if (error) throw new Error(error.message);
   const cards = (data ?? []) as KnowledgeCard[];
   return { cards, hasMore: cards.length === PUSH_PAGE_SIZE };
 }
@@ -294,13 +294,18 @@ export async function fetchRecentPushedKc(
   }];
 }
 
-/** 查询导游当前房间已推送过的 kc_card_id 集合（用于去重标记） */
+/** 查询导游当前房间已推送过的 kc_card_id 集合（用于去重标记）
+ *  失败时静默降级返回空 Set，不中断卡片加载链 */
 export async function fetchPushedKcIds(roomId: string): Promise<Set<string>> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("card_pushes")
     .select("kc_card_id")
     .eq("room_id", roomId)
     .not("kc_card_id", "is", null);
+  if (error) {
+    console.warn('[CardLibrary] fetchPushedKcIds 失败，降级使用空 Set:', error.message);
+    return new Set();
+  }
   return new Set(
     (data ?? []).map((r: { kc_card_id: string | null }) => r.kc_card_id ?? "").filter(Boolean)
   );

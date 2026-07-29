@@ -169,10 +169,8 @@ export function CardLibrary({ go }: Props) {
   // 本页内联编辑：目标卡片（null = 不显示抽屉）
   const [editTarget, setEditTarget] = useState<KnowledgeCard | null>(null);
 
-  // 未推送卡片列表（仅追加，id 去重）
-  const [unpushedItems, setUnpushedItems] = useState<KnowledgeCard[]>([]);
-  // 已推送卡片列表（固定在底部，按推送时间倒序插入）
-  const [pushedItems, setPushedItems] = useState<KnowledgeCard[]>([]);
+  // 已加载卡片全集（权威来源）：仅追加、id 去重；category/search/room 变化时重置
+  const [loadedItems, setLoadedItems] = useState<KnowledgeCard[]>([]);
   // 已推送 id 集合（权威来源：DB card_pushes.kc_card_id，本次推送成功后追加）
   const [pushedKcIds, setPushedKcIds] = useState<Set<string>>(new Set());
   // 本次会话内跳过的 id（仅内存，刷新/重进恢复，不写 DB）
@@ -198,11 +196,9 @@ export function CardLibrary({ go }: Props) {
 
   // ── 重置：筛选变化/房间切换时清空分页和列表，skipIds 跨筛选持续保留 ──
   const reset = useCallback(() => {
-    setUnpushedItems([]);
-    setPushedItems([]);
+    setLoadedItems([]);
     setPushedKcIds(new Set());
-    // ⚠️ skipIds 不在此清空：切换搜索词/分类后跳过记录仍保留，
-    //    已跳过区只按当前筛选派生（skippedItems 计算时受 unpushedItems 筛选范围限制）
+    // ⚠️ skipIds 不在此清空：切换搜索词/分类后跳过记录仍保留
     cursorRef.current = undefined;
     hasMoreRef.current = true;
     loadingRef.current = false;
@@ -211,7 +207,7 @@ export function CardLibrary({ go }: Props) {
     setAllLoaded(false);
   }, []);
 
-  // ── 加载一批（追加，不重置） ──
+  // ── 加载一批（追加到全集，不重置） ──
   const loadBatch = useCallback(async (
     cat: string,
     q: string,
@@ -223,34 +219,31 @@ export function CardLibrary({ go }: Props) {
     setLoading(true);
     setLoadError(false);
 
-    const { cards, hasMore } = await fetchKcPageForPush(cursor, cat, q)
-      .catch(() => ({ cards: [] as KnowledgeCard[], hasMore: false }));
-
-    if (cards.length === 0 && !hasMore) {
-      // 请求失败（empty + hasMore false 两种情况需区分）
-      // fetchKcPageForPush 内部 catch 返回 hasMore:false，但 cards 也为空
-      // 用 loadError 区分"真正末尾"与"网络错误"——
-      // 此处保守处理：empty 也视为末尾（fetch 内部已 toast 错误时会抛出）
+    let cards: KnowledgeCard[] = [];
+    let hasMore = false;
+    try {
+      const result = await fetchKcPageForPush(cursor, cat, q);
+      cards = result.cards;
+      hasMore = result.hasMore;
+      console.log(`[CardLibrary] 加载 ${cards.length} 张卡片，pushedIds=${currentPushedIds.size}，hasMore=${hasMore}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[CardLibrary] fetchKcPageForPush 失败:', msg);
+      setLoadError(true);
+      loadingRef.current = false;
+      setLoading(false);
+      return; // 保留已有全集，不清空，等用户重试
     }
 
     if (cards.length > 0) {
       const last = cards[cards.length - 1];
       cursorRef.current = { createdAt: last.created_at, id: last.id };
 
-      // id 去重（防止 Realtime 更新导致重复）
-      setUnpushedItems(prev => {
-        const existingIds = new Set([...prev.map(c => c.id)]);
-        const fresh = cards.filter(c =>
-          !existingIds.has(c.id) && !currentPushedIds.has(c.id)
-        );
-        return [...prev, ...fresh];
-      });
-      setPushedItems(prev => {
+      // 追加到全集（id 去重）
+      setLoadedItems(prev => {
         const existingIds = new Set(prev.map(c => c.id));
-        const alreadyPushed = cards.filter(c =>
-          currentPushedIds.has(c.id) && !existingIds.has(c.id)
-        );
-        return [...prev, ...alreadyPushed];
+        const fresh = cards.filter(c => !existingIds.has(c.id));
+        return fresh.length === 0 ? prev : [...prev, ...fresh];
       });
     }
 
@@ -264,8 +257,9 @@ export function CardLibrary({ go }: Props) {
   useEffect(() => {
     if (!currentRoom) return;
     reset();
-    // 先拉已推送 id，再首批加载
+    // fetchPushedKcIds 失败时降级空 Set，保证卡片查询链不中断
     fetchPushedKcIds(currentRoom.id).then(ids => {
+      console.log(`[CardLibrary] pushedKcIds 加载完成，数量=${ids.size}`);
       setPushedKcIds(ids);
       loadBatch(category, search, undefined, ids);
     });
@@ -298,14 +292,9 @@ export function CardLibrary({ go }: Props) {
     setEditTarget(kc);
   }, []);
 
-  // ── 编辑保存成功回调：按 card.id 局部更新两个列表，确保 UPDATE 而非 INSERT ──
+  // ── 编辑保存成功回调：按 card.id 局部更新全集，确保 UPDATE 而非 INSERT ──
   const handleEditSaved = useCallback(async (updatedCard: KnowledgeCard) => {
-    // 用返回的最新数据同步未推送列表
-    setUnpushedItems(prev =>
-      prev.map(c => c.id === updatedCard.id ? { ...c, ...updatedCard } : c)
-    );
-    // 同步已推送列表
-    setPushedItems(prev =>
+    setLoadedItems(prev =>
       prev.map(c => c.id === updatedCard.id ? { ...c, ...updatedCard } : c)
     );
     setEditTarget(null);
@@ -332,22 +321,19 @@ export function CardLibrary({ go }: Props) {
 
     if (error && !push && !isIdempotent) {
       // 真实网络/权限错误：保留原位，显示可重试错误
-      const msg = error;
-      setPushErrors(prev => new Map([...prev, [kc.id, msg]]));
-      toast.error(`推送失败：${msg}`);
+      setPushErrors(prev => new Map([...prev, [kc.id, error]]));
+      toast.error(`推送失败：${error}`);
       return;
     }
 
-    // 成功（含幂等重复）：收敛到同一推送成功路径
-    // 从未推送列表移走 → 插入已推送列表顶部 → 更新 id 集合 → 清理 skip 快照
-    setPushedKcIds(prev => new Set([...prev, kc.id]));
-    setUnpushedItems(prev => prev.filter(c => c.id !== kc.id));
+    // 成功（含幂等重复）：更新 pushedKcIds + 清理 skip 快照；全集不变，派生分区自动重算
+    setPushedKcIds(prev => {
+      const next = new Set([...prev, kc.id]);
+      console.log(`[CardLibrary] 推送成功 ${kc.id}，pushedKcIds.size=${next.size}`);
+      return next;
+    });
     setSkipIds(prev => { const s = new Set(prev); s.delete(kc.id); return s; });
     setSkipMap(prev => { const m = new Map(prev); m.delete(kc.id); return m; });
-    setPushedItems(prev => {
-      if (prev.some(c => c.id === kc.id)) return prev;
-      return [kc, ...prev];
-    });
     if (!isIdempotent) toast.success(`「${kc.title_cn}」已推送给游客`);
   }, [currentRoom?.id, user?.id, pushedKcIds]);
 
@@ -360,24 +346,16 @@ export function CardLibrary({ go }: Props) {
     });
   };
 
-  // ── 重分流：pushedKcIds 异步到达或成功推送后，将 unpushedItems 中已推送的卡片移入 pushedItems ──
-  // 解决竞态：loadBatch 可能在 fetchPushedKcIds 返回前用空 Set 分流，导致已推送卡片留在 unpushedItems
-  useEffect(() => {
-    if (pushedKcIds.size === 0) return;
-    setUnpushedItems(prev => {
-      const toMove = prev.filter(c => pushedKcIds.has(c.id));
-      if (toMove.length === 0) return prev;
-      setPushedItems(pushed => {
-        const existingIds = new Set(pushed.map(c => c.id));
-        const fresh = toMove.filter(c => !existingIds.has(c.id));
-        return fresh.length === 0 ? pushed : [...pushed, ...fresh];
-      });
-      return prev.filter(c => !pushedKcIds.has(c.id));
-    });
-  }, [pushedKcIds]);
+  // ── 从全集派生三个分区（纯计算，无异步竞态） ──
+  // pushedItems：全集中 pushedKcIds 包含的卡片（保持加载顺序）
+  const pushedItems = loadedItems.filter(c => pushedKcIds.has(c.id));
+  // unpushedItems：全集中未推送的卡片
+  const unpushedItems = loadedItems.filter(c => !pushedKcIds.has(c.id));
+  // visibleUnpushed：未推送中排除已跳过
+  const visibleUnpushed = unpushedItems.filter(c => !skipIds.has(c.id));
 
-  // 过滤跳过 + 已推送（双重防线：初始加载时 pushedKcIds 可能已填充，防止已推送卡片混入未推送区）
-  const visibleUnpushed = unpushedItems.filter(c => !skipIds.has(c.id) && !pushedKcIds.has(c.id));
+  // 开发日志：分区数量
+  console.log(`[CardLibrary] 派生分区: loaded=${loadedItems.length} pushed=${pushedItems.length} unpushed=${unpushedItems.length} visible=${visibleUnpushed.length}`);
 
   // 已跳过卡片列表：从快照 Map 取出全部，不受当前筛选限制
   const skippedCards = Array.from(skipMap.values());
@@ -531,8 +509,8 @@ export function CardLibrary({ go }: Props) {
           );
         })}
 
-        {/* 空状态（首次加载完且无卡片） */}
-        {!loading && visibleUnpushed.length === 0 && pushedItems.length === 0 && allLoaded && (
+        {/* 空状态：知识卡片查询成功且已完成加载，但全集确实为 0（与分区无关） */}
+        {!loading && !loadError && loadedItems.length === 0 && allLoaded && (
           <div className="empty-state">
             <Landmark size={40} className="empty-icon" />
             <p className="empty-title">暂无可用卡片</p>
