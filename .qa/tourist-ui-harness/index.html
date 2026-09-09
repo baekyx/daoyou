@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>游客端正式组件 · 本地视觉验收</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <output id="qa-console-errors" style="position:fixed;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)">console-errors:0</output>
+    <script>
+      window.__qaConsoleErrors = [];
+      const qaOriginalConsoleError = console.error.bind(console);
+      console.error = (...args) => {
+        window.__qaConsoleErrors.push(args.map(String).join(' '));
+        document.getElementById('qa-console-errors').textContent = `console-errors:${window.__qaConsoleErrors.length}`;
+        qaOriginalConsoleError(...args);
+      };
+      window.addEventListener('error', event => {
+        document.body.dataset.qaError = event.message || 'unknown error';
+        document.getElementById('root').textContent = event.message || 'unknown error';
+        window.__qaConsoleErrors.push(event.message || 'unknown error');
+        document.getElementById('qa-console-errors').textContent = `console-errors:${window.__qaConsoleErrors.length}`;
+      });
+      window.addEventListener('unhandledrejection', event => {
+        document.body.dataset.qaError = String(event.reason || 'unhandled rejection');
+        document.getElementById('root').textContent = String(event.reason || 'unhandled rejection');
+        window.__qaConsoleErrors.push(String(event.reason || 'unhandled rejection'));
+        document.getElementById('qa-console-errors').textContent = `console-errors:${window.__qaConsoleErrors.length}`;
+      });
+    </script>
+    <script type="module" src="/.qa/tourist-ui-harness/main.tsx"></script>
+  </body>
+</html>

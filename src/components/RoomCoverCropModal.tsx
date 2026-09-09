@@ -46,6 +46,8 @@ const WHEEL_SENSITIVITY = 0.0012;
 interface Props {
   /** 原图 ObjectURL（调用方负责在 onConfirm/onCancel 后 revoke） */
   src: string;
+  /** 顶部标题；房间封面以外的 16:9 图片也可复用该裁剪器 */
+  title?: string;
   /** 收到裁剪 + 压缩后的 JPEG Blob，size < 4.8 MiB */
   onConfirm: (blob: Blob) => void;
   /** 取消时调用 */
@@ -184,7 +186,7 @@ function clamp(
 }
 
 // ─── 组件 ─────────────────────────────────────────────────────────────────
-export function RoomCoverCropModal({ src, onConfirm, onCancel }: Props) {
+export function RoomCoverCropModal({ src, title = '裁剪封面', onConfirm, onCancel }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -406,7 +408,7 @@ export function RoomCoverCropModal({ src, onConfirm, onCancel }: Props) {
       {/* 顶部操作栏 */}
       <div className="rcc-topbar">
         <button className="rcc-topbar-btn" onClick={onCancel} disabled={confirming}>取消</button>
-        <span className="rcc-topbar-title">裁剪封面</span>
+        <span className="rcc-topbar-title">{title}</span>
         <button
           className="rcc-topbar-btn rcc-topbar-confirm"
           onClick={handleConfirm}

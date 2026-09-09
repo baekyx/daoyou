@@ -8,11 +8,16 @@ import type { UserRole } from '@/types/types';
 import { USER_AGREEMENT, PRIVACY_POLICY } from '@/lib/legalContent';
 import { supabase } from '@/db/supabase';
 
-interface Props { go: (id: string) => void }
+interface Props {
+  go: (
+    id: string,
+    authOverride?: { authenticated: boolean; role?: string | null },
+  ) => void;
+}
 
 // ─── 登录（手机号 + 验证码） ─────────────────────────────
 export function Login({ go }: Props) {
-  const { sendPhoneOtp, verifyPhoneOtp, refreshProfile } = useAuth();
+  const { sendPhoneOtp, verifyPhoneOtp } = useAuth();
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -90,25 +95,23 @@ export function Login({ go }: Props) {
     const { error } = await verifyPhoneOtp(phone.replace(/\s/g, ''), token);
     if (error) { setBusy(false); toast.error(error); setOtp(['', '', '', '', '', '']); return; }
     // 登录成功：直接从 API 拿最新 profile（绕过 useState 异步闭包问题）
-    // 同时触发 refreshProfile 更新全局 Context
     const authUser = supabase.auth;
     const { data: { user: freshUser } } = await authUser.getUser();
     const latestProfile = freshUser ? await fetchMyProfile() : null;
-    refreshProfile(); // 异步更新 Context，不等待
     setBusy(false);
     toast.success('登录成功');
     // 根据已有角色决定跳转，实现幂等跳过
     const role = latestProfile?.role;
     if (!role) {
-      go('role');               // 新用户：选角色
+      go('role', { authenticated: true, role: null }); // 新用户：选角色
     } else if (!latestProfile?.nickname) {
-      go('profile');            // 有角色但未填昵称：完善资料
+      go('profile', { authenticated: true, role });    // 有角色但未填昵称：完善资料
     } else if (role === 'guide') {
-      go('guide-home');         // 导游直接进主页
+      go('guide-home', { authenticated: true, role }); // 导游直接进主页
     } else if (role === 'photographer') {
-      go('photographer-tasks'); // 摄影师直接进主页
+      go('photographer-tasks', { authenticated: true, role }); // 摄影师直接进主页
     } else {
-      go('room-list');          // 游客直接进房间列表
+      go('room-list', { authenticated: true, role }); // 游客直接进房间列表
     }
   };
 

@@ -4,16 +4,25 @@
  * - PhotographerPrivacyPage  (C09-C) 隐私与权限
  * - PhotographerHelpPage     (C09-D) 帮助与反馈
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Wifi, WifiOff, HardDrive, Shield, HelpCircle,
   ChevronDown, ChevronUp, Trash2, Send, CheckCircle2,
-  Lock, Camera, Image as ImageIcon, FileText, X,
+  Lock, Camera, FileText, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { insertFeedback } from '@/api/feedbacks';
 import { USER_AGREEMENT, PRIVACY_POLICY } from '@/lib/legalContent';
+import {
+  readUploadQuality,
+  UPLOAD_QUALITY_OPTIONS,
+  type UploadQuality,
+} from '@/lib/imageCompression';
+import {
+  getUploadNetworkState,
+  WIFI_ONLY_STORAGE_KEY,
+} from '@/lib/networkPreferences';
 
 interface Props { go: (id: string) => void }
 
@@ -25,25 +34,16 @@ const SAFE_CLEAR_KEYS = [
   'shiguang-cache-hint',
 ];
 
-// ── 上传质量选项 ────────────────────────────────────────────────────────
-const QUALITY_OPTIONS = [
-  { value: 'original', label: '原图', desc: '保留完整画质，流量消耗较大' },
-  { value: 'hd',       label: '高清', desc: '压缩至 1080p，兼顾画质与流量' },
-  { value: 'economy',  label: '省流', desc: '压缩至 720p，显著节省流量' },
-] as const;
-type Quality = typeof QUALITY_OPTIONS[number]['value'];
-
 // ═══════════════════════════════════════════════════════════════════════
 // C09-B 存储与网络
 // ═══════════════════════════════════════════════════════════════════════
 export function PhotographerStoragePage({ go }: Props) {
   const [online, setOnline]   = useState(navigator.onLine);
   const [wifiOnly, setWifiOnly] = useState<boolean>(
-    () => localStorage.getItem('shiguang-wifi-only') === 'true'
+    () => localStorage.getItem(WIFI_ONLY_STORAGE_KEY) === 'true'
   );
-  const [quality, setQuality] = useState<Quality>(
-    () => (localStorage.getItem('shiguang-upload-quality') as Quality) ?? 'hd'
-  );
+  const [networkDetectable] = useState(() => getUploadNetworkState().detectable);
+  const [quality, setQuality] = useState<UploadQuality>(() => readUploadQuality());
 
   // 监听网络在线状态
   useEffect(() => {
@@ -59,11 +59,11 @@ export function PhotographerStoragePage({ go }: Props) {
 
   const handleWifiOnly = (v: boolean) => {
     setWifiOnly(v);
-    localStorage.setItem('shiguang-wifi-only', String(v));
+    localStorage.setItem(WIFI_ONLY_STORAGE_KEY, String(v));
     toast.success(v ? '已开启仅 Wi-Fi 上传偏好' : '已关闭仅 Wi-Fi 上传偏好');
   };
 
-  const handleQuality = (v: Quality) => {
+  const handleQuality = (v: UploadQuality) => {
     setQuality(v);
     localStorage.setItem('shiguang-upload-quality', v);
     toast.success('上传质量偏好已保存');
@@ -78,7 +78,7 @@ export function PhotographerStoragePage({ go }: Props) {
   };
 
   return (
-    <div className="screen padded-screen ps-page">
+    <div className="screen padded-screen ps-page photographer-storage-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('photographer-my')} aria-label="返回">
           <span className="back-chevron" />
@@ -100,7 +100,11 @@ export function PhotographerStoragePage({ go }: Props) {
               {online ? '在线' : '离线'}
             </span>
           </div>
-          <p className="ps-tip">注：浏览器无法可靠区分 Wi-Fi 与移动数据，网络类型仅供参考。</p>
+          <p className="ps-tip">
+            {networkDetectable
+              ? '当前浏览器支持网络类型检测。'
+              : '当前浏览器无法识别 Wi-Fi；开启限制后会在上传前提醒，但不会误拦截。'}
+          </p>
         </div>
       </div>
 
@@ -130,18 +134,19 @@ export function PhotographerStoragePage({ go }: Props) {
         <div className="ps-section-title">图片上传质量</div>
         <div className="ps-card">
           <p className="ps-tip" style={{ marginBottom: 12 }}>
-            此偏好仅保存本地，不影响服务器上传压缩逻辑。
+            选择后会用于照片上传前的本地压缩，也可以在上传页临时切换。
           </p>
-          {QUALITY_OPTIONS.map(opt => (
+          {UPLOAD_QUALITY_OPTIONS.map(opt => (
             <button
               key={opt.value}
               className={`ps-quality-item ${quality === opt.value ? 'selected' : ''}`}
               onClick={() => handleQuality(opt.value)}
+              aria-pressed={quality === opt.value}
             >
               <div className="ps-quality-dot" />
               <div>
                 <span className="ps-quality-label">{opt.label}</span>
-                <span className="ps-quality-desc">{opt.desc}</span>
+                <span className="ps-quality-desc">{opt.description}</span>
               </div>
             </button>
           ))}
@@ -171,64 +176,12 @@ export function PhotographerStoragePage({ go }: Props) {
 // ═══════════════════════════════════════════════════════════════════════
 // C09-C 隐私与权限
 // ═══════════════════════════════════════════════════════════════════════
-type PermStatus = 'idle' | 'granted' | 'denied' | 'prompt' | 'unsupported';
-
-interface PermState {
-  camera: PermStatus;
-  photos: PermStatus; // 相册（mediaDevices.getUserMedia 图片选择不需要显式权限，说明即可）
-}
-
 export function PhotographerPrivacyPage({ go }: Props) {
-  const [perm, setPerm] = useState<PermState>({ camera: 'idle', photos: 'idle' });
   const [showAgreement, setShowAgreement] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  // 查询相机权限（不主动申请）
-  const queryCamera = useCallback(async () => {
-    if (!navigator.permissions) {
-      setPerm(p => ({ ...p, camera: 'unsupported' }));
-      return;
-    }
-    try {
-      const res = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      setPerm(p => ({ ...p, camera: res.state as PermStatus }));
-      res.onchange = () => setPerm(p => ({ ...p, camera: res.state as PermStatus }));
-    } catch {
-      setPerm(p => ({ ...p, camera: 'unsupported' }));
-    }
-  }, []);
-
-  useEffect(() => { queryCamera(); }, [queryCamera]);
-
-  // 主动申请相机权限
-  const requestCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(t => t.stop());
-      setPerm(p => ({ ...p, camera: 'granted' }));
-      toast.success('相机权限已授予');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '';
-      if (msg.includes('denied') || msg.includes('NotAllowed')) {
-        setPerm(p => ({ ...p, camera: 'denied' }));
-        toast.error('相机权限被拒绝，请在浏览器/系统设置中手动开启');
-      } else {
-        setPerm(p => ({ ...p, camera: 'unsupported' }));
-        toast.error('此浏览器不支持相机权限申请');
-      }
-    }
-  };
-
-  const statusLabel = (s: PermStatus) => {
-    if (s === 'granted')     return { text: '已授权', cls: 'green' };
-    if (s === 'denied')      return { text: '已拒绝', cls: 'red' };
-    if (s === 'prompt')      return { text: '待确认', cls: 'amber' };
-    if (s === 'unsupported') return { text: '请在系统设置管理', cls: 'muted' };
-    return { text: '未检测', cls: 'muted' };
-  };
-
   return (
-    <div className="screen padded-screen ps-page">
+    <div className="screen padded-screen ps-page photographer-privacy-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('photographer-my')} aria-label="返回">
           <span className="back-chevron" />
@@ -241,32 +194,12 @@ export function PhotographerPrivacyPage({ go }: Props) {
       <div className="ps-section">
         <div className="ps-section-title">应用权限</div>
         <div className="ps-card">
-          {/* 相机 */}
+          {/* Web 上传由系统选择器统一管理，不申请与业务无关的媒体流权限。 */}
           <div className="ps-perm-item">
             <div className="ps-perm-icon"><Camera size={16} /></div>
             <div className="ps-perm-body">
-              <span className="ps-perm-name">相机</span>
-              <span className="ps-perm-desc">用于拍摄并上传照片至当前房间</span>
-            </div>
-            <div className="ps-perm-right">
-              {(() => {
-                const { text, cls } = statusLabel(perm.camera);
-                return <span className={`ps-badge ${cls}`}>{text}</span>;
-              })()}
-              {perm.camera !== 'granted' && perm.camera !== 'denied' && (
-                <button className="ps-perm-btn" onClick={requestCamera}>申请</button>
-              )}
-              {perm.camera === 'denied' && (
-                <span className="ps-perm-hint">请在浏览器设置中手动开启</span>
-              )}
-            </div>
-          </div>
-          {/* 相册（Web 选文件不需要额外权限，仅说明） */}
-          <div className="ps-perm-item">
-            <div className="ps-perm-icon"><ImageIcon size={16} /></div>
-            <div className="ps-perm-body">
-              <span className="ps-perm-name">相册 / 文件访问</span>
-              <span className="ps-perm-desc">通过系统文件选择器访问，无需额外授权</span>
+              <span className="ps-perm-name">拍照 / 相册</span>
+              <span className="ps-perm-desc">上传时由系统文件选择器提供拍照或选图入口</span>
             </div>
             <div className="ps-perm-right">
               <span className="ps-badge green">系统管理</span>
@@ -298,7 +231,7 @@ export function PhotographerPrivacyPage({ go }: Props) {
           <div className="ps-modal" onClick={e => e.stopPropagation()}>
             <div className="ps-modal-header">
               <strong>用户协议</strong>
-              <button onClick={() => setShowAgreement(false)}><X size={18} /></button>
+              <button onClick={() => setShowAgreement(false)} aria-label="关闭用户协议"><X size={18} /></button>
             </div>
             <div className="ps-modal-body">
               <pre className="ps-legal-text">{USER_AGREEMENT}</pre>
@@ -313,7 +246,7 @@ export function PhotographerPrivacyPage({ go }: Props) {
           <div className="ps-modal" onClick={e => e.stopPropagation()}>
             <div className="ps-modal-header">
               <strong>隐私政策</strong>
-              <button onClick={() => setShowPrivacy(false)}><X size={18} /></button>
+              <button onClick={() => setShowPrivacy(false)} aria-label="关闭隐私政策"><X size={18} /></button>
             </div>
             <div className="ps-modal-body">
               <pre className="ps-legal-text">{PRIVACY_POLICY}</pre>
@@ -331,15 +264,15 @@ export function PhotographerPrivacyPage({ go }: Props) {
 const FAQ_LIST = [
   {
     q: '如何加入房间？',
-    a: '在任务页点击"加入房间"，输入导游提供的 6 位房间号，验证通过后等待导游审核即可进入。',
+    a: '在任务页点击“加入房间”，输入导游提供的 6 位房间号和房间密码，验证通过后即可进入。',
   },
   {
-    q: '为什么需要导游审核？',
-    a: '为保障讲解房间的安全性，摄影师加入前需由导游确认身份。通常审核仅需数秒，审核通过后会自动通知您。',
+    q: '加入后下次还要输入密码吗？',
+    a: '不用。加入状态会保存在账号中，只要房间尚未结束，就可以从任务列表继续进入并上传。',
   },
   {
     q: '如何上传照片？',
-    a: '进入已批准的房间后，点击底部"上传"Tab，选择本地照片即可上传。支持同时选择多张，上传进度实时显示。',
+    a: '进入已加入的房间后选择照片，并选择原图、高清或标准画质。支持同时选择多张，处理和上传进度会实时显示。',
   },
   {
     q: '上传失败怎么办？',
@@ -366,19 +299,25 @@ export function PhotographerHelpPage({ go }: Props) {
     if (contact.length > 100) { toast.error('联系方式不超过 100 字'); return; }
     if (submitting) return;
     setSubmitting(true);
-    const { error } = await insertFeedback({
-      role: profile?.role ?? 'photographer',
-      category,
-      content: trimmed,
-      contact: contact.trim() || null,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error('提交失败：' + error);
-      return;
+    try {
+      const { error } = await insertFeedback({
+        role: profile?.role ?? 'photographer',
+        category,
+        content: trimmed,
+        contact: contact.trim() || null,
+      });
+      if (error) {
+        toast.error('提交失败：' + error);
+        return;
+      }
+      toast.success('反馈已提交');
+      setSubmitted(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '未知错误';
+      toast.error('提交失败：' + message);
+    } finally {
+      setSubmitting(false);
     }
-    toast.success('反馈已提交');
-    setSubmitted(true);
   };
 
   const handleReset = () => {
@@ -389,7 +328,7 @@ export function PhotographerHelpPage({ go }: Props) {
   };
 
   return (
-    <div className="screen padded-screen ps-page">
+    <div className="screen padded-screen ps-page photographer-help-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('photographer-my')} aria-label="返回">
           <span className="back-chevron" />
@@ -442,6 +381,7 @@ export function PhotographerHelpPage({ go }: Props) {
                     className={`ps-category-btn${category === c ? ' selected' : ''}`}
                     onClick={() => setCategory(c)}
                     type="button"
+                    aria-pressed={category === c}
                   >{c}</button>
                 ))}
               </div>
@@ -450,6 +390,7 @@ export function PhotographerHelpPage({ go }: Props) {
                 问题描述 <span className="ps-required">*</span>
               </div>
               <textarea
+                aria-label="问题描述"
                 className="ps-feedback-input"
                 placeholder="请描述您遇到的问题或建议（5~1000 字）"
                 value={content}
@@ -462,6 +403,7 @@ export function PhotographerHelpPage({ go }: Props) {
                 联系方式 <span className="ps-optional">（选填）</span>
               </div>
               <input
+                aria-label="联系方式"
                 className="ps-feedback-contact"
                 placeholder="手机号、微信号或邮箱（方便我们回复）"
                 value={contact}

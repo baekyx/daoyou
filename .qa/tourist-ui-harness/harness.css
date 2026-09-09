@@ -1,0 +1,11 @@
+.mobile-app.qa-mobile-size {
+  width: var(--qa-width, 390px);
+  height: var(--qa-height, 844px);
+  min-height: var(--qa-height, 844px);
+  overflow: hidden;
+}
+
+.mobile-app.qa-mobile-size > .screen {
+  height: var(--qa-height, 844px);
+  min-height: 0;
+}

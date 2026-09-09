@@ -12,6 +12,7 @@ dist
 dist-ssr
 output
 *.local
+supabase/.env.local
 package-lock.json
 playwright-report
 test-results

@@ -16,11 +16,15 @@ export async function updateProfile(
   userId: string,
   updates: Partial<Pick<Profile, "nickname" | "avatar_url" | "phone" | "gender">>
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq("id", userId);
-  return { error: error?.message ?? null };
+    .eq("id", userId)
+    .select("id")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "资料不存在、无更新权限或修改未写入" };
+  return { error: null };
 }
 
 /**

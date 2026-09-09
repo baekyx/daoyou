@@ -48,3 +48,7 @@ BEGIN
   ORDER BY rm.joined_at ASC;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.get_room_member_history_safe(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_room_member_history_safe(UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_room_member_history_safe(UUID) TO authenticated;

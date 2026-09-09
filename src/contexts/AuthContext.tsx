@@ -104,9 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }).finally(() => setLoading(false));
 
     // In this function, do NOT use any await calls. Use `.then()` instead to avoid deadlocks.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
+        // 界面语言等 user_metadata 更新不影响 profiles，避免整页进入 profileLoading 闪屏。
+        if (event === 'USER_UPDATED') {
+          setProfileLoading(false);
+          return;
+        }
         loadProfile(session.user.id);
       } else {
         setProfile(null);

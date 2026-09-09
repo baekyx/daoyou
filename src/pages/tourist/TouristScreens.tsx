@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   ChevronRight, UserRound, Landmark, Settings2,
   MessageCircleQuestion, Languages, Volume2,
-  Headphones, AlertTriangle, RefreshCw, ChevronDown, Wifi, WifiOff,
+  Headphones, AlertTriangle, RefreshCw, ChevronDown, Wifi, WifiOff, Search,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchActiveRooms } from '@/api/rooms';
+import { fetchActiveRoomsStrict } from '@/api/rooms';
 import {
-  joinRoomWithPassword, fetchQuestions, sendQuestion, leaveRoom,
+  joinRoomWithPassword, fetchBarrages, fetchQuestions, sendQuestion, leaveRoom,
   restoreCurrentRoom, resolveRoomEntry,
 } from '@/api/roomActivity';
 import { fetchKcByPush, fetchLatestPushedKc } from '@/api/cards';
-import { attachSubtitleListener, subscribeWithFallback } from '@/lib/voiceApi';
+import {
+  attachSubtitleListener,
+  subscribeWithFallback,
+  type SubtitleChangeSource,
+} from '@/lib/voiceApi';
 import { fetchSubtitlesSafe } from '@/api/subtitles';
 import { useRoomRtc } from '@/hooks/use-room-rtc';
 import { isTurnConfigured } from '@/lib/rtcConfig';
-import type { KnowledgeCard, Question as QuestionRecord, Room, Subtitle } from '@/types/types';
+import type { Barrage, KnowledgeCard, Question as QuestionRecord, Room, Subtitle } from '@/types/types';
 import { ACTIVE_KC_ID_KEY } from '@/pages/cards/CardScreens';
 import { toast } from 'sonner';
 import { supabase } from '@/db/supabase';
@@ -40,11 +44,29 @@ export function RoomList({ go }: Props) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [search, setSearch] = useState('');
   const [enteringId, setEnteringId] = useState<string | null>(null);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [roomListError, setRoomListError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   const { setCurrentRoom } = useAuth();
 
   useEffect(() => {
-    fetchActiveRooms().then(setRooms);
-  }, []);
+    let cancelled = false;
+    setLoadingRooms(true);
+    setRoomListError(false);
+    fetchActiveRoomsStrict()
+      .then(data => {
+        if (!cancelled) setRooms(data);
+      })
+      .catch(() => {
+        if (!cancelled) setRoomListError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRooms(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [retryTick]);
 
   const filtered = search
     ? rooms.filter(r => r.room_number.includes(search) || r.name.includes(search))
@@ -60,48 +82,91 @@ export function RoomList({ go }: Props) {
   };
 
   return (
-    <div className="screen padded-screen has-tabbar">
-      <div className="section-heading">
-        <span><Landmark />发现房间</span>
-        <h2>加入讲解</h2>
-        <p>选择一个正在讲解的房间开始收听</p>
-      </div>
+    <div className="screen padded-screen has-tabbar tourist-home-screen">
+      <div className="tourist-page-scroll">
+      <header className="tourist-welcome-hero">
+        <div className="tourist-welcome-copy">
+          <p>你好，旅行者 👋</p>
+          <h1>发现讲解</h1>
+          <span>选择正在进行的房间，开始实时收听。</span>
+        </div>
+        <div className="tourist-welcome-person" aria-hidden="true">
+          <img src="/avatars/tourist-hero-cutout.webp" alt="" />
+        </div>
+      </header>
 
-      <div className="search-box">
+      <div className="search-box tourist-room-search">
+        <Search size={18} aria-hidden="true" />
         <input
-          placeholder="输入房间号搜索…"
+          placeholder="搜索房间名称或房间号"
+          aria-label="搜索房间号或房间名称"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
       </div>
 
+      <div className="tourist-room-section-heading">
+        <h2>正在讲解</h2>
+        <span>{filtered.length} 个房间</span>
+      </div>
+
       <div className="room-card-list">
-        {filtered.length === 0 ? (
+        {loadingRooms ? (
+          <div className="loading-state"><div className="spinner" /><span>正在查找讲解房间…</span></div>
+        ) : roomListError ? (
+          <div className="empty-state room-empty-state" role="alert">
+            <AlertTriangle size={36} className="empty-icon" />
+            <h3 className="empty-title">房间列表加载失败</h3>
+            <p className="empty-desc">请检查网络后重新加载</p>
+            <button className="empty-action-btn" onClick={() => setRetryTick(value => value + 1)}>
+              <RefreshCw size={14} />重新加载
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="empty-state room-empty-state">
             <span className="empty-icon"><Landmark /></span>
-            <h3 className="empty-title">暂时没有可加入的讲解房</h3>
-            <p className="empty-desc">可输入导游提供的房间号搜索，或通过邀请链接进入。</p>
+            <h3 className="empty-title">{search ? '未找到对应房间' : '暂时没有可加入的讲解房'}</h3>
+            <p className="empty-desc">
+              {search ? '请检查房间号，或清空搜索后查看全部房间。' : '可输入导游提供的房间号搜索，或通过邀请链接进入。'}
+            </p>
           </div>
         ) : filtered.map(room => (
-          <button key={room.id} className="room-card" onClick={() => selectRoom(room)} disabled={!!enteringId}>
+          <button
+            key={room.id}
+            className={`room-card${enteringId === room.id ? ' is-entering' : ''}`}
+            onClick={() => selectRoom(room)}
+            disabled={!!enteringId}
+            aria-busy={enteringId === room.id}
+          >
             {room.cover_url
               ? <img src={room.cover_url} className="room-card-cover" alt={room.name} />
               : <div className="scenic-art compact" />
             }
             <div className="room-card-copy">
-              <span className={`status-chip ${room.status === 'live' ? 'live' : ''}`}>
-                {room.status === 'live' ? '讲解中' : '待开始'}
-              </span>
-              <h3>{room.name}</h3>
-              <p>房间号 {room.room_number} · {room.online_count} 人</p>
-              <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-                <UserRound style={{ width: 12, height: 12 }} />
+              <div className="room-card-title-row">
+                <h3>{room.name}</h3>
+                <span className={`status-chip ${room.status === 'live' ? 'live' : ''}`}>
+                  {room.status === 'live' ? '讲解中' : '待开始'}
+                </span>
+              </div>
+              <p className="room-card-meta">
+                <span>房间号 {room.room_number}</span>
+                <span>{room.online_count} 人在线</span>
+              </p>
+              <p className="room-card-guide">
+                {(room.guide as any)?.avatar_url
+                  ? <img src={(room.guide as any).avatar_url} alt="" />
+                  : <UserRound style={{ width: 12, height: 12 }} />
+                }
                 {(room.guide as any)?.nickname ?? (room.guide as any)?.username ?? '导游'}
               </p>
             </div>
-            <b>{enteringId === room.id ? <span className="spinner-sm" /> : <ChevronRight />}</b>
+            <b className="room-card-enter">
+              {enteringId === room.id ? <span className="spinner-sm" /> : <ChevronRight />}
+            </b>
           </button>
         ))}
+      </div>
       </div>
 
       <BottomNav active="房间" go={go} variant="visitorHome" />
@@ -342,7 +407,9 @@ export function Listening({ go }: Props) {
   const { user, currentRoom, subtitlePrefs, setSubtitlePrefs, setCurrentRoom } = useAuth();
   const { restoring, restoreFailed } = useRoomRestore();
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+  const [liveDraft, setLiveDraft] = useState('');
   const [questions, setQuestions] = useState<QuestionRecord[]>([]);
+  const [barrages, setBarrages] = useState<Barrage[]>([]);
   // Task2：activeCard 直接存 KC 内容，不再存 RoomCard 中间层
   const [activeCard, setActiveCard] = useState<KnowledgeCard | null>(null);
   // push_id 去重 ref：防止 Realtime 断线重连重放同一条 INSERT / UPDATE 触发多次弹窗
@@ -352,12 +419,14 @@ export function Listening({ go }: Props) {
   const cardChannelSubscribedRef = useRef(false);
   const [roomEnded, setRoomEnded] = useState(false);
   const [englishVoiceState, setEnglishVoiceState] = useState<'off' | 'ready' | 'playing' | 'blocked'>('off');
+  const [englishAudioUnlocked, setEnglishAudioUnlocked] = useState(false);
   // Realtime 同步状态（轮询降级时显示"字幕连接恢复中"）
   const [realtimeSyncStatus, setRealtimeSyncStatus] = useState<'ok' | 'degraded'>('ok');
   // subtitleEndRef / subtitleScrollRef / autoScroll 在下方 WebRTC 消费块统一声明
   const englishAudioRef = useRef<HTMLAudioElement | null>(null);
   const englishQueueRef = useRef<string[]>([]);
   const englishPlayingRef = useRef(false);
+  const englishAttemptRef = useRef(0);
   const englishEnabledRef = useRef(subtitlePrefs.showEn);
   const playedEnglishIdsRef = useRef<Set<string>>(new Set());
 
@@ -394,22 +463,33 @@ export function Listening({ go }: Props) {
 
   const playNextEnglish = useCallback(() => {
     if (!englishEnabledRef.current || englishPlayingRef.current) return;
-    const nextUrl = englishQueueRef.current.shift();
+    const nextUrl = englishQueueRef.current[0];
     if (!nextUrl) { setEnglishVoiceState('ready'); return; }
+    // 播放失败时必须保留当前段；这里只预览队首，成功开始播放后才真正出队。
     const audio = englishAudioRef.current ?? new Audio();
     englishAudioRef.current = audio;
+    const attempt = ++englishAttemptRef.current;
     audio.preload = 'auto';
     audio.src = nextUrl;
     audio.onended = () => {
+      if (attempt !== englishAttemptRef.current) return;
       englishPlayingRef.current = false;
       playNextEnglish();
     };
     audio.onerror = () => {
+      if (attempt !== englishAttemptRef.current) return;
+      if (englishQueueRef.current[0] === nextUrl) englishQueueRef.current.shift();
       englishPlayingRef.current = false;
       playNextEnglish();
     };
     englishPlayingRef.current = true;
-    audio.play().then(() => setEnglishVoiceState('playing')).catch(() => {
+    audio.play().then(() => {
+      if (attempt !== englishAttemptRef.current) return;
+      if (englishQueueRef.current[0] === nextUrl) englishQueueRef.current.shift();
+      setEnglishAudioUnlocked(true);
+      setEnglishVoiceState('playing');
+    }).catch(() => {
+      if (attempt !== englishAttemptRef.current) return;
       englishPlayingRef.current = false;
       setEnglishVoiceState('blocked');
     });
@@ -422,10 +502,45 @@ export function Listening({ go }: Props) {
     playNextEnglish();
   }, [playNextEnglish]);
 
+  const stopEnglishAudio = useCallback(() => {
+    englishAttemptRef.current += 1;
+    englishQueueRef.current = [];
+    englishPlayingRef.current = false;
+    if (englishAudioRef.current) {
+      englishAudioRef.current.pause();
+      englishAudioRef.current.currentTime = 0;
+    }
+    setEnglishVoiceState('off');
+  }, []);
+
+  const unlockEnglishAudio = useCallback(async () => {
+    englishEnabledRef.current = true;
+    if (englishPlayingRef.current) {
+      setEnglishAudioUnlocked(true);
+      return;
+    }
+    if (englishQueueRef.current.length > 0) {
+      playNextEnglish();
+      return;
+    }
+    const audio = englishAudioRef.current ?? new Audio();
+    englishAudioRef.current = audio;
+    audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    try {
+      await audio.play();
+      audio.pause();
+      setEnglishAudioUnlocked(true);
+      setEnglishVoiceState('ready');
+    } catch {
+      setEnglishAudioUnlocked(false);
+      setEnglishVoiceState('blocked');
+    }
+  }, [playNextEnglish]);
+
   // WebRTC：从房间级 RoomRtcProvider 消费（信令/连接已在 Provider 初始化）
   const {
     connState, candidateKind, turnConfigured, relayForced,
-    guideMicOn, audioPlayState, playAudio, retryConnect,
+    guideMicOn, audioPlayState, playAudio, setChineseAudioEnabled, retryConnect,
     trackPresence, untrackPresence,
   } = useRoomRtc();
 
@@ -440,18 +555,34 @@ export function Listening({ go }: Props) {
   const subtitleEndRef = useRef<HTMLDivElement>(null);
   const subtitleScrollRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
+  const knownSubtitleIdsRef = useRef<Set<string>>(new Set());
 
   // 加载字幕、问题 & 实时订阅
   useEffect(() => {
     if (!currentRoom) return;
+    let disposed = false;
 
     // 切换/重新挂载时清除旧房间的弹窗状态和去重集合，防止旧事件串入新房间
     setActiveCard(null);
     seenPushIdsRef.current = new Set();
     cardChannelSubscribedRef.current = false;
+    knownSubtitleIdsRef.current = new Set();
 
-    fetchSubtitlesSafe(currentRoom.id, 50).then(setSubtitles);
+    fetchSubtitlesSafe(currentRoom.id, 50).then(rows => {
+      if (disposed) return;
+      rows.forEach(row => knownSubtitleIdsRef.current.add(row.id));
+      setSubtitles(prev => {
+        const liveRows = prev.filter(
+          row => row.room_id === currentRoom.id && !rows.some(loaded => loaded.id === row.id),
+        );
+        return [...rows, ...liveRows].sort((a, b) => {
+          if (a.sequence != null && b.sequence != null) return a.sequence - b.sequence;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+      });
+    });
     fetchQuestions(currentRoom.id).then(setQuestions);
+    fetchBarrages(currentRoom.id, 50).then(setBarrages);
 
     // ── 历史补查：仅将最近一张已推送卡片写入 sessionStorage，供用户手动进入卡片详情页使用；
     //    不调用 setActiveCard，绝不触发弹窗，避免刷新/重新打开时重复弹出"导游刚刚推送"。
@@ -465,7 +596,7 @@ export function Listening({ go }: Props) {
       }
     });
 
-    const ch = supabase.channel(`listening-cards-${currentRoom.id}`)
+    const ch = supabase.channel(`room-live-${currentRoom.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'card_pushes', filter: `room_id=eq.${currentRoom.id}` },
         payload => {
           // 门控1：channel 必须已 SUBSCRIBED，否则丢弃（属于订阅建立前的历史回放）
@@ -507,6 +638,11 @@ export function Listening({ go }: Props) {
         })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'questions', filter: `room_id=eq.${currentRoom.id}` },
         payload => setQuestions(prev => [payload.new as QuestionRecord, ...prev]))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_barrages', filter: `room_id=eq.${currentRoom.id}` },
+        payload => {
+          const barrage = payload.new as Barrage;
+          setBarrages(prev => [barrage, ...prev.filter(item => item.id !== barrage.id)].slice(0, 50));
+        })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${currentRoom.id}` },
         payload => {
           const updated = payload.new as Partial<Room>;
@@ -516,11 +652,26 @@ export function Listening({ go }: Props) {
           if (updated.status === 'ended') {
             setRoomEnded(true);
           }
-        });
+        })
+      .on('broadcast', { event: 'subtitle-draft' }, ({ payload }) => {
+        if (payload?.room_id !== currentRoom.id) return;
+        setLiveDraft(String(payload?.text ?? ''));
+      });
 
     // 将字幕监听合并到同一 channel，避免单独 subtitles channel 再占一条数据库连接
     // 使用 subscribeWithFallback：连接异常时自动降级为 3s 增量轮询，恢复后停止轮询
-    const subtitleHandler = (s: Subtitle) => {
+    const subtitleHandler = (s: Subtitle, source: SubtitleChangeSource) => {
+      const wasKnown = knownSubtitleIdsRef.current.has(s.id);
+      knownSubtitleIdsRef.current.add(s.id);
+      // 只有真正的新最终字幕才能结束当前草稿。
+      // 旧字幕补翻译/音频、以及降级轮询的历史快照均不得清空新的流式草稿。
+      if (
+        source === 'insert'
+        || source === 'poll-insert'
+        || (source === 'local' && !wasKnown)
+      ) {
+        setLiveDraft('');
+      }
       setSubtitles(prev => {
         const merged = [...prev.filter(item => item.id !== s.id), s];
         merged.sort((a, b) => {
@@ -529,8 +680,11 @@ export function Listening({ go }: Props) {
         });
         return merged;
       });
-      enqueueEnglishAudio(s);
-      enqueueChineseAudio(s); // B1-T: enqueueChineseAudio 为空操作，中文分片暂停
+      // 降级轮询第一次返回的是历史快照，只用于补齐画面，不能把旧语音重新播放一遍。
+      if (source !== 'poll-snapshot') {
+        enqueueEnglishAudio(s);
+        enqueueChineseAudio(s); // B1-T: enqueueChineseAudio 为空操作，中文分片暂停
+      }
     };
     const subtitleCleanup = attachSubtitleListener(ch, currentRoom.id, subtitleHandler);
 
@@ -539,9 +693,9 @@ export function Listening({ go }: Props) {
       `listening-cards-${currentRoom.id}`,
       currentRoom.id,
       setRealtimeSyncStatus,
-      s => {
+      (s, source) => {
         // 轮询新字幕 / 内容更新（fingerprint 去重已在 subscribeWithFallback 内处理）
-        subtitleHandler(s);
+        subtitleHandler(s, source);
       },
       // SUBSCRIBED 回调：channel 就绪后才允许 card_pushes INSERT 触发弹窗
       () => {
@@ -551,6 +705,8 @@ export function Listening({ go }: Props) {
     );
 
     return () => {
+      disposed = true;
+      setLiveDraft('');
       subtitleCleanup.unsubscribe();
       fbCleanup.unsubscribe();
       supabase.removeChannel(ch);
@@ -562,18 +718,12 @@ export function Listening({ go }: Props) {
   useEffect(() => {
     englishEnabledRef.current = subtitlePrefs.showEn;
     if (!subtitlePrefs.showEn) {
-      englishQueueRef.current = [];
-      englishPlayingRef.current = false;
-      if (englishAudioRef.current) {
-        englishAudioRef.current.pause();
-        englishAudioRef.current.currentTime = 0;
-      }
-      setEnglishVoiceState('off');
+      stopEnglishAudio();
       return;
     }
     setEnglishVoiceState(prev => prev === 'playing' ? prev : 'ready');
     playNextEnglish();
-  }, [subtitlePrefs.showEn, playNextEnglish]);
+  }, [subtitlePrefs.showEn, playNextEnglish, stopEnglishAudio]);
 
   // 中文模式开关：B1-T 中文分片已暂停，仅清理队列
   useEffect(() => {
@@ -587,7 +737,13 @@ export function Listening({ go }: Props) {
     setChineseVoiceState('off');
   }, [subtitlePrefs.mode]);
 
+  // 中文原声只允许在中文模式播放；英文与双语模式保持 RTC 连接但暂停其声音。
+  useEffect(() => {
+    void setChineseAudioEnabled(subtitlePrefs.mode === 'cn');
+  }, [setChineseAudioEnabled, subtitlePrefs.mode]);
+
   useEffect(() => () => {
+    englishAttemptRef.current += 1;
     englishQueueRef.current = [];
     englishPlayingRef.current = false;
     englishAudioRef.current?.pause();
@@ -613,13 +769,15 @@ export function Listening({ go }: Props) {
   // 新字幕到达，仅 autoScroll 开启时滚底
   useEffect(() => {
     if (autoScroll) subtitleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [subtitles, autoScroll]);
+  }, [autoScroll, barrages, liveDraft, questions, subtitles]);
 
   // RTC 状态文案
   const rtcLabel: Record<string, string> = {
     idle: '等待开启收听',
     connecting: '正在连接…',
-    connected: candidateKind === 'relay'
+    connected: candidateKind === 'baidu'
+      ? '百度 RTC 已连接'
+      : candidateKind === 'relay'
       ? 'relay 已连接（TURN 中继）'
       : `实时收听中（${candidateKind}）`,
     disconnected: '连接中断',
@@ -629,6 +787,27 @@ export function Listening({ go }: Props) {
 
   const fontSizeMap = { small: 16, medium: 18, large: 22 };
   const fs = fontSizeMap[subtitlePrefs.fontSize];
+  const listenerContentItems = useMemo(() => {
+    const subtitleItems = subtitles.map(item => ({
+      kind: 'subtitle' as const,
+      id: `subtitle-${item.id}`,
+      at: new Date(item.created_at).getTime(),
+      data: item,
+    }));
+    const questionItems = questions.map(item => ({
+      kind: 'question' as const,
+      id: `question-${item.id}`,
+      at: new Date(item.created_at).getTime(),
+      data: item,
+    }));
+    const barrageItems = barrages.map(item => ({
+      kind: 'barrage' as const,
+      id: `barrage-${item.id}`,
+      at: new Date(item.created_at).getTime(),
+      data: item,
+    }));
+    return [...subtitleItems, ...questionItems, ...barrageItems].sort((a, b) => a.at - b.at);
+  }, [barrages, questions, subtitles]);
 
   if (restoring) {
     return (
@@ -649,27 +828,25 @@ export function Listening({ go }: Props) {
 
   const showCn = subtitlePrefs.mode !== 'en';
   const showEn = subtitlePrefs.mode !== 'cn';
+  const needsListeningUnlock = subtitlePrefs.mode === 'cn'
+    ? audioPlayState === 'idle' || audioPlayState === 'blocked'
+    : !englishAudioUnlocked || englishVoiceState === 'blocked';
 
   const updateLanguageMode = (mode: 'cn' | 'en' | 'bilingual') => {
+    englishEnabledRef.current = mode !== 'cn';
     setSubtitlePrefs({
       ...subtitlePrefs,
       mode,
       showCn: mode !== 'en',
       showEn: mode !== 'cn',
     });
-    // 切到含英文模式：尝试解锁英文音频
-    if (mode !== 'cn' && englishVoiceState === 'blocked' && englishAudioRef.current) {
-      englishPlayingRef.current = true;
-      englishAudioRef.current.play()
-        .then(() => setEnglishVoiceState('playing'))
-        .catch(() => { englishPlayingRef.current = false; setEnglishVoiceState('blocked'); });
-    }
-    // 切到纯中文模式：尝试解锁中文原声
-    if (mode === 'cn' && chineseVoiceState === 'blocked' && chineseAudioRef.current) {
-      chinesePlayingRef.current = true;
-      chineseAudioRef.current.play()
-        .then(() => setChineseVoiceState('playing'))
-        .catch(() => { chinesePlayingRef.current = false; setChineseVoiceState('blocked'); });
+    if (mode === 'cn') {
+      stopEnglishAudio();
+      void setChineseAudioEnabled(true);
+      void playAudio();
+    } else {
+      void setChineseAudioEnabled(false);
+      void unlockEnglishAudio();
     }
   };
 
@@ -707,7 +884,9 @@ export function Listening({ go }: Props) {
               {m === 'cn' ? '中' : m === 'en' ? 'EN' : '双语'}
             </button>
           ))}
-          <button onClick={() => go('subtitle-settings')}><Settings2 />字幕设置</button>
+          <button className="language-settings-btn" onClick={() => go('subtitle-settings')}>
+            <Settings2 /><span>字幕设置</span>
+          </button>
         </div>
         {subtitlePrefs.showEn && (
           <div className={`english-voice-status ${englishVoiceState}`}>
@@ -740,37 +919,15 @@ export function Listening({ go }: Props) {
         </div>
 
         {/* 开启收听 / 恢复收听 按钮（必须真实手势触发 play()，同时解锁英文 Audio） */}
-        {(audioPlayState === 'idle' || audioPlayState === 'blocked') && connState === 'connected' && (
+        {needsListeningUnlock && connState === 'connected' && (
           <button className="rtc-play-btn" onClick={() => {
-            // 1. 解锁 WebRTC 中文原声
-            playAudio();
-            // 2. 在同一用户手势内解锁英文 Audio（若已有待播 URL 则立即播放，否则预热 Audio 上下文）
-            if (englishEnabledRef.current) {
-              if (!englishAudioRef.current) englishAudioRef.current = new Audio();
-              const audio = englishAudioRef.current;
-              if (englishQueueRef.current.length > 0 && !englishPlayingRef.current) {
-                // 队列里已有待播 URL，直接推进播放器
-                const nextUrl = englishQueueRef.current.shift()!;
-                audio.src = nextUrl;
-                audio.preload = 'auto';
-                audio.onended = () => { englishPlayingRef.current = false; playNextEnglish(); };
-                audio.onerror = () => { englishPlayingRef.current = false; playNextEnglish(); };
-                englishPlayingRef.current = true;
-                audio.play()
-                  .then(() => setEnglishVoiceState('playing'))
-                  .catch(() => { englishPlayingRef.current = false; setEnglishVoiceState('blocked'); });
-              } else {
-                // 队列为空：静默播放一段空白来预热 Audio 上下文，之后 enqueueEnglishAudio 可直接 play()
-                audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-                audio.play().then(() => {
-                  audio.pause();
-                  setEnglishVoiceState('ready');
-                }).catch(() => setEnglishVoiceState('blocked'));
-              }
-            }
+            if (subtitlePrefs.mode === 'cn') void playAudio();
+            else void unlockEnglishAudio();
           }}>
             <Headphones size={18} />
-            {audioPlayState === 'blocked' ? '点击恢复收听' : '开启收听'}
+            {subtitlePrefs.mode === 'cn'
+              ? audioPlayState === 'blocked' ? '点击恢复中文收听' : '开启中文收听'
+              : englishVoiceState === 'blocked' ? '点击恢复英文收听' : '开启英文收听'}
           </button>
         )}
 
@@ -800,16 +957,46 @@ export function Listening({ go }: Props) {
         <p style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', padding: '4px 0 0' }}>
           {realtimeSyncStatus === 'ok' ? '字幕实时同步中' : '字幕连接恢复中'}
         </p>
-        {subtitles.length === 0 ? (
+        <div className="listener-content-heading">
+          <strong>实时内容</strong>
+          <span>{listenerContentItems.length} 条</span>
+        </div>
+        {listenerContentItems.length === 0 && !liveDraft ? (
           <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '24px 0' }}>等待导游开始讲解…</p>
-        ) : subtitles.map(s => (
-          <div key={s.id} className="subtitle-card" style={{ fontSize: fs }}>
-            {showCn && <p className="zh">{s.content_cn}</p>}
-            {showEn && s.content_en && (
-              <p className="en" style={{ color: 'var(--muted)', fontSize: fs - 1 }}>{s.content_en}</p>
-            )}
+        ) : listenerContentItems.map(item => {
+          if (item.kind === 'subtitle') {
+            const subtitle = item.data as Subtitle;
+            return (
+              <article key={item.id} className="lcs-bubble lcs-bubble--subtitle" style={{ fontSize: fs }}>
+                {showCn && <p className="lcs-bubble__main">{subtitle.content_cn}</p>}
+                {showEn && subtitle.content_en && <p className="lcs-bubble__sub">{subtitle.content_en}</p>}
+              </article>
+            );
+          }
+          if (item.kind === 'question') {
+            const question = item.data as QuestionRecord;
+            return (
+              <article key={item.id} className="lcs-bubble lcs-bubble--question">
+                <p className="lcs-bubble__main">{`${question.profile?.nickname ?? '游客'}：${question.content}`}</p>
+                {question.translated_text && <p className="lcs-bubble__sub">{question.translated_text}</p>}
+                <span className="lcs-bubble__tag">提问</span>
+              </article>
+            );
+          }
+          const barrage = item.data as Barrage;
+          return (
+            <article key={item.id} className="lcs-bubble lcs-bubble--barrage">
+              <p className="lcs-bubble__main">{`${barrage.profile?.nickname ?? '游客'}：${barrage.content}`}</p>
+              <span className="lcs-bubble__tag">弹幕</span>
+            </article>
+          );
+        })}
+        {liveDraft && (
+          <div className="subtitle-card subtitle-card--draft" style={{ fontSize: fs }}>
+            {showCn && <p className="zh">{liveDraft}</p>}
+            <span className="subtitle-draft-label">识别中…</span>
           </div>
-        ))}
+        )}
         <div ref={subtitleEndRef} />
       </div>
 
@@ -1031,21 +1218,16 @@ export function SubtitleSettings({ go, returnTo = 'listening' }: Props & { retur
     go(returnTo);
   };
 
-  const toggleLanguage = (key: 'showCn' | 'showEn') => {
-    setLocal(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (!next.showCn && !next.showEn) return prev;
-      next.mode = next.showCn && next.showEn ? 'bilingual' : next.showCn ? 'cn' : 'en';
-      return next;
-    });
+  const setListeningMode = (mode: 'cn' | 'english') => {
+    setLocal(prev => mode === 'cn'
+      ? { ...prev, mode: 'cn', showCn: true, showEn: false }
+      : { ...prev, mode: 'bilingual', showCn: true, showEn: true });
   };
 
-  const setMode = (mode: 'cn' | 'en' | 'bilingual') => {
-    setLocal(prev => ({ ...prev, mode, showCn: mode !== 'en', showEn: mode !== 'cn' }));
-  };
+  const isEnglishMode = local.mode !== 'cn';
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen subtitle-settings-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go(returnTo)} aria-label="返回">
           <span className="back-chevron" />
@@ -1054,56 +1236,46 @@ export function SubtitleSettings({ go, returnTo = 'listening' }: Props & { retur
         <span />
       </div>
 
-      <p className="voice-setting-note"><Volume2 />中文原声始终实时播放；开启英文后，英文翻译语音将自动播放。</p>
-
-      <div className="settings-card exact-settings">
-        {/* 中文字幕 */}
-        <div className="setting-toggle-row">
-          <span className="setting-icon">中</span>
-          <strong>显示中文字幕</strong>
-          <button
-            className={`toggle-btn ${local.showCn ? 'on' : ''}`}
-            onClick={() => toggleLanguage('showCn')}
-          >{local.showCn ? '开' : '关'}</button>
-        </div>
-        {/* 英文翻译 */}
-        <div className="setting-toggle-row">
-          <span className="setting-icon">EN</span>
-          <strong>英文字幕与语音</strong>
-          <button
-            className={`toggle-btn ${local.showEn ? 'on' : ''}`}
-            onClick={() => toggleLanguage('showEn')}
-          >{local.showEn ? '开' : '关'}</button>
-        </div>
-        {/* 显示模式 */}
-        <div className="display-mode-row">
-          <strong>默认显示模式</strong>
-          <div className="segment">
-            {(['cn', 'en', 'bilingual'] as const).map(m => (
-              <button
-                key={m}
-                className={local.mode === m ? 'active' : ''}
-                onClick={() => setMode(m)}
-              >{m === 'cn' ? '中' : m === 'en' ? 'EN' : '双语'}</button>
-            ))}
+      <div className="subtitle-preference-card">
+        <section className="subtitle-preference-section">
+          <h2>收听模式</h2>
+          <div className="subtitle-mode-options" role="group" aria-label="收听模式">
+            <button
+              className={!isEnglishMode ? 'active' : ''}
+              onClick={() => setListeningMode('cn')}
+              aria-pressed={!isEnglishMode}
+            >中文</button>
+            <button
+              className={isEnglishMode ? 'active' : ''}
+              onClick={() => setListeningMode('english')}
+              aria-pressed={isEnglishMode}
+            >English</button>
           </div>
-        </div>
-        {/* 字号 */}
-        <div className="display-mode-row">
-          <strong>字幕字号</strong>
-          <div className="segment">
+        </section>
+
+        <section className="subtitle-preference-section mode-summary-section" aria-live="polite">
+          <h2>当前模式说明</h2>
+          <p>{isEnglishMode
+            ? '英文合成语音 · 同时显示中英字幕'
+            : '中文原声 · 显示中文字幕'}</p>
+        </section>
+
+        <section className="subtitle-preference-section">
+          <h2>字幕字号</h2>
+          <div className="subtitle-size-options" role="group" aria-label="字幕字号">
             {(['small', 'medium', 'large'] as const).map(s => (
               <button
                 key={s}
                 className={local.fontSize === s ? 'active' : ''}
                 onClick={() => setLocal(p => ({ ...p, fontSize: s }))}
+                aria-pressed={local.fontSize === s}
               >{s === 'small' ? '小' : s === 'medium' ? '中' : '大'}</button>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
-      <button className="primary-button green" onClick={save}>保存我的设置</button>
+      <button className="primary-button green subtitle-settings-save" onClick={save}>保存设置</button>
     </div>
   );
 }

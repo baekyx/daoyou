@@ -1,0 +1,185 @@
+
+===== PAGE 1 =====
+USB 版 OpenClaw 配置与预制 Agent ⽅
+案
+两⼤需求完整落地⽅案（基于现有 U-Claw 便携 USB 架构
+⽆缝改造）
+先汇总你的两个核⼼诉求：
+需求 1：内置初始化配置⾯板 + 品牌信息固化（公司联系⽅式、客服
+⼊⼝、Token 简易配置界⾯）
+⽬标效果：⽤⼾插上 USB 启动 OpenClaw 后，不⽤修改配置⽂件、不⽤⼿动编辑 .env，在⽹
+⻚端可视化填⼊ API Token；⻚⾯底部 / 侧边固定展⽰公司名称、客服微信 / 电话、在线客服链
+接；
+禁⽌普通⽤⼾直接接触硬盘内 json/env 配置⽂件，降低使⽤⻔槛。
+需求 2：预制批量 Agent（法务、财务、⼈事、⽼板参谋、健康顾问
+等），硬盘即插即⽤，开箱⾃带全部 Agent，不需要⽤⼾⼿动导⼊
+⽬标效果：第⼀次打开系统，Agent 列表直接加载全套预制⻆⾊，⽆需导⼊ JSON、⽆需复制
+提⽰词。
+下⾯分开给出实现路径、操作步骤、配置修改⽅案，兼容前⾯ USB 便携包架构。
+⼀、需求 1｜可视化 Token 配置 + 植⼊公司品牌、在线客
+服⼊⼝
+===== PAGE 2 =====
+两种实现⽅案（推荐⽅案 1，改动最⼩，适配官⽅ OpenClaw）
+⽅案 1：修改 OpenClaw 前端静态⻚⾯（⾸选，⽆侵⼊业务逻辑）
+架构路径： 前端资源⽬录
+portable/app/web/
+1. ⻚⾯底部全局增加品牌 & 客服栏 编辑 / 主布局 layout ⽂件 在全局底部
+web/index.html
+增加固定区域，⽰例：
+Plain Text
+1 <div style="padding:12px;text-align:center;border-top:1px solid #eee;ma
+rgin-top:20px;">
+智能助⼿系统 技术⽀持： 公司
+2 <p>Dta AI | XXX </p>
+客服热线： 在线客服： 你
+3 <p> 13XXXXXXXXX | <a target="_blank" href="https://
+的在线客服⽹⻚链接 点击接⼊客服
+"> </a></p>
+便携移动硬盘版，请勿随意删除硬盘内⽂件
+4 <p>USB </p>
+5 </div>
+✅优势：升级 OpenClaw 时可以单独备份这段代码，重复植⼊；所有⻚⾯全局展⽰。
+1. 简化 Token 配置⼊⼝（两种路线⼆选⼀）
+路线 A（最简单）：新增独⽴【初始化设置】⻚⾯
+在前端增加单独设置⻚⾯，表单填写：LLM API 地址、Key、模型名称；
+前端点击保存后，直接写⼊ USB 硬盘内 ⽂件
+portable/.env
+⚠ 关键点：所有读写操作使⽤相对路径，不要写⼊本机 C 盘。
+Windows/macOS/Linux 下 node.js 拥有 USB 硬盘⽂件读写权限，完全可⾏。
+后端新增简易接⼝⽰例（在 gateway 增加接⼝）
+===== PAGE 3 =====
+Plain Text
+接收前端表单，覆盖 配置⽂件
+1 // .env
+2 const fs = require('fs');
+3 const path = require('path');
+关键：定位 硬盘根⽬录 （相对路径，跨系统兼容）
+4 // USB .env
+5 const envPath = path.resolve(__dirname, '../../.env');
+填写完成后提⽰：配置已保存⾄移动硬盘，下次插上电脑依然保留。
+路线 B（零开发⽅案，适合不想修改源码）
+不在⽹⻚内置编辑器，在 USB 硬盘 放置
+OpenClawUSB/portable/
+【⾸次使⽤请打开 配置 】
+- Token.txt
+⽂件内附带说明，附带模板 .env，⽤⼾复制改名即可；
+同时⽹⻚⾸⻚弹窗提⽰：⾸次使⽤请查看硬盘内《配置指南》，附带客服联系⽅式。
+⽅案 2（重度改造）：系统内置向导弹窗（推荐商业化交付）
+启动 WebUI 时，⾃动检测 是否存在有效 API_KEY
+.env
+• 不存在 → 弹出初始化向导弹窗：
+1. 填写⼤模型 API Key、接⼝地址
+2. 【客服咨询】按钮直接跳转在线客服链接
+3. 保存写⼊硬盘 .env，关闭向导，进⼊主界⾯
+• 已存在配置 → 直接进⼊系统
+重要安全 & 交付提⽰
+1. 绝对不要预制任何正式 Token ，全部由终端⽤⼾⾃⾏填写；
+2. .env ⽂件存放在移动硬盘，所有配置永久跟随 USB；
+3. 如果你后续有多批次硬盘分发，可以制作「空⽩模板包」，不含密钥；
+===== PAGE 4 =====
+4. 可以在启动脚本增加检测：如果 .env 缺失关键参数，控制台输出提⽰⽂案，附带客服电
+话。
+附加优化（交付⽤⼾体验）
+移动硬盘根⽬录新建 📖使⽤说明 （双击直接浏览器打开，跨系统通⽤）
+.html
+内容包含：
+• 启动操作步骤
+• Token 配置图⽂教程
+• 故障排查清单
+• 公司联系⽅式、在线客服⼆维码链接
+⼆、需求 2：预制全套 Agent，打包进 USB 硬盘，开箱即
+⽤
+OpenClaw Agent 存储机制（先搞懂原理）
+OpenClaw 所有 Agent 数据默认存储路径（我们已经改成相对路径）
+portable/data/agents/
+数据载体：
+1. sqlite 数据库 （agent 基础信息）
+data/openclaw.db
+2. 部分版本 agent ⽀持独⽴ json ⽂件导⼊导出
+两种预制⽅案（推荐⽅案 A，稳定、便于批量复制硬盘）
+⽅案 A：预⽣成完整数据库模板（量产 USB 硬盘⾸选）
+操作步骤
+1. 准备⺟盘环境 拿⼀份我们的 U-Claw 便携包，正常启动 OpenClaw
+===== PAGE 5 =====
+2. 在⽹⻚端⼿动创建全部 Agent： ⼈事 Agent、法务 Agent、财务 Agent、企业经营参谋、⽼
+板健康顾问、办公助⼿等
+建议每个 Agent 完善：⻆⾊名称、头像、系统提⽰词、⼯作流程、插件权限、知识库关联
+1. 全部创建完成后， 正常关闭 OpenClaw 服务 （⼀定要正常退出，防⽌数据库损坏）
+2. 复制⽂件： + 整个⽬录 👉 这
+portable/data/openclaw.db portable/data/agents/
+就是【预制 Agent 模板数据】
+3. 批量量产所有 USB 移动硬盘 制作新硬盘便携包时，直接把这套 data ⽂件夹覆盖进去 新硬
+盘启动 OpenClaw，打开⽹⻚，所有 Agent 直接出现，⽆需任何导⼊操作。
+⭐最⼤优势：零代码、最稳定，适合⼤批量拷⻉ USB 硬盘。
+⽅案 B：预制 Agent JSON 导⼊包 + 系统⾃动导⼊（适合持续新增
+Agent）
+1. 在⺟环境创建好每个 Agent，后台逐个导出为
+.agent.json
+2. 在硬盘新建⽬录： ，存放所有导出 agent ⽂件
+portable/preset_agents/
+3. 修改启动脚本， OpenClaw 启动完成后⾃动执⾏导⼊脚本 逻辑流程： 启动 node 服务 →
+等待⽹关就绪 → 调⽤ OpenClaw API 批量导⼊ preset_agents 内所有⻆⾊ 增加判断：检测
+数据库是否已经导⼊过预制 Agent，避免重复新建重复数据。
+⾃动导⼊简易脚本⽰例（可嵌⼊启动脚本末尾）
+新建
+portable/preset-load.js
+===== PAGE 6 =====
+Plain Text
+1 const fs = require('fs');
+2 const path = require('path');
+3 const axios = require('axios');
+4
+5 const agentDir = path.resolve(__dirname, "./preset_agents");
+6 const apiUrl = "http://127.0.0.1:18789/api/v1/agents/import";
+7
+读取所有 ⾃动导⼊
+8 // json
+9 async function loadPresetAgents(){
+10 const files = fs.readdirSync(agentDir).filter(f=>f.endsWith('.jso
+n'));
+11 for(const file of files){
+12 const content = fs.readFileSync(path.join(agentDir,file),'utf
+8');
+13 await axios.post(apiUrl, JSON.parse(content));
+14 }
+预制 加载完成
+15 console.log(" Agent ");
+16 }
+17 loadPresetAgents();
+然后在启动脚本启动 OpenClaw 之后，延时执⾏此脚本。
+⽅案 A vs ⽅案 B 对⽐
+Agent 预制配套建议
+1. 给每个 Agent 配置专属头像，头像⽂件⼀并放⼊ ，相对路径引⽤；
+data/assets/
+2. 可以给 Agent 预设配套知识库：把通⽤办公法规、财务模板、⼈事制度⽂档预先放⼊
+，并且提前绑定对应 Agent；
+data/knowledge/
+3. 权限预设：关闭危险系统权限，仅开放业务所需插件。
+三、两个需求合并落地完整实施顺序（标准⽣产流程）
+按照这个顺序制作⺟盘模板，之后直接全盘复制到所有 USB 固态移动硬盘
+===== PAGE 7 =====
+1. 搭建基础 U-Claw ⽬录结构，放⼊跨平台 Node、OpenClaw 程序
+2. 修改前端⻚⾯，植⼊公司品牌信息、客服联系⽅式、在线客服链接
+3. 在⺟盘环境启动 OpenClaw，⼿动创建全部办公类 Agent（⼈事 / 法务 / 财务 / ⽼板参谋 /
+健康顾问等）
+4. 正常关闭服务，保存完整 ⽬录（包含带 Agent 的数据库）
+data/
+5. 完善 使⽤说明 、配置指引⽂档
+.html
+6. 测试：换⼀台 Windows、⼀台 Mac、⼀台 Linux 电脑，分别插上 USB，双击脚本启动验证
+✅ ⻚⾯底部显⽰公司信息 ✅ 所有预制 Agent 全部存在 ✅ 配置 Token 保存在移动硬盘，
+换电脑配置不丢失
+7. ⺟盘模板确认⽆误后，全盘克隆到其他 USB 移动固态硬盘
+四、重点避坑提醒
+1. 拷⻉ data ⽬录前，必须正常关闭 OpenClaw！ 强制拔盘、直接关机容易造成 sqlite 数据
+库损坏，Agent 丢失；
+2. exFAT ⽂件系统对 sqlite 性能⼀般，不要同时多台设备共⽤⼀块硬盘读写；
+3. 如果后续更新 Agent：需要在⺟盘更新，重新保存 data 模板，再批量刷新所有硬盘；
+4. 前端修改⽂件，后续升级 OpenClaw 源码时，注意备份 index.html 等修改过的⻚⾯，避免
+覆盖丢失品牌客服代码；
+5. 不要把 API 密钥预置在模板内，严格由终端⽤⼾⾃⾏填写。
+延伸可选增值功能（如果你需要）
+1. ⾸⻚弹窗：欢迎语 + 客服⼊⼝；
+2. 增加系统【关于我们】⻚⾯，展⽰公司介绍、技术服务；
+3. 增加版本检测脚本，检测 U 盘内程序更新；
+4. 增加⼀键导出配置功能，⽤⼾可以备份⾃⼰的 Token 和 Agent 调整内容。

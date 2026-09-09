@@ -1,0 +1,17 @@
+{
+  "name": "shiguang-asr-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "拾光旅伴百度实时语音识别 WebSocket 网关",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "check": "node --check src/server.mjs"
+  },
+  "dependencies": {
+    "ws": "8.21.1"
+  }
+}

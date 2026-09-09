@@ -1,31 +1,102 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { buildInviteUrl } from '@/lib/inviteUrl';
 import {
   UsersRound, Clock3, Landmark, CircleDot, ChevronRight, Plus,
   Languages, Share2, Check,
   Copy, LockKeyhole,
   Mic, MicOff, Square, Loader2, Radio, History, ImagePlus,
-  Images, Headphones, AlignLeft, Image as ImageIcon, LogOut, RefreshCw,
-  AlertCircle, Eye, EyeOff,
+  Images, Headphones, LogOut, RefreshCw,
+  AlertCircle, Eye, EyeOff, ChevronDown, Camera, CircleUserRound,
+  DoorOpen, Captions,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchGuideRooms, fetchRoomById, createRoom, updateRoomStatus, genPassword, fetchMyRoomPassword } from '@/api/rooms';
+import {
+  fetchGuideRooms, fetchRoomById, createRoom, updateRoomStatus,
+  updateRoomDuration, genPassword, fetchMyRoomPassword,
+} from '@/api/rooms';
 import { uploadRoomCoverBlob } from '@/api/roomCover';
 import { RoomCoverCropModal } from '@/components/RoomCoverCropModal';
-import { fetchQuestions } from '@/api/roomActivity';
+import { fetchBarrages, fetchQuestions } from '@/api/roomActivity';
+import { fetchAllSubtitles, fetchSubtitlesSafe } from '@/api/subtitles';
 import { fetchRoomMembersSafe } from '@/api/profiles';
 import {
-  processAudioChunk, processDemoAudioChunk, attachSubtitleListener, subscribeWithFallback,
+  processAudioChunk, processDemoAudioChunk, saveRecognizedText,
+  attachSubtitleListener, subscribeWithFallback, waitForSubtitleEnrichment,
+  type SubtitleChangeSource,
 } from '@/lib/voiceApi';
+import {
+  startStreamingSpeech,
+  type StreamingSpeechSession,
+  type StreamingSpeechResult,
+} from '@/lib/streamingSpeech';
 import { useWebRTC } from '@/hooks/use-webrtc';
+import { useBaiduRtc } from '@/hooks/use-baidu-rtc';
 import { RoomPresenceProvider, useRoomPresence } from '@/hooks/use-room-presence';
-import type { Room, Question, RoomMember, Subtitle } from '@/types/types';
+import type { Barrage, Room, Question, RoomMember, Subtitle } from '@/types/types';
 import { toast } from 'sonner';
 import { supabase } from '@/db/supabase';
-import QRCodeDataUrl from '@/components/ui/qrcodedataurl';
+import { generateMeetingMinutes, saveMeetingMinutes } from '@/lib/meetingMinutes';
+import { useAppLanguage } from '@/i18n/AppLanguageContext';
+import { saveMeetingMinutesCloud } from '@/api/meetingMinutes';
 
 interface Props { go: (id: string) => void }
+
+const DEFAULT_ROOM_COVER_URL = 'https://miaoda-site-img.cdn.bcebos.com/images/baidu_image_search_1a8b8a77-d487-4258-b258-c6732fb5bac3.jpg';
+
+export interface GuideLiveSnapshot {
+  roomId: string;
+  subtitles: Subtitle[];
+  members: RoomMember[];
+}
+
+function normalizeStreamingText(text: string) {
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/([。！？!?，,；;：:])\1+/g, '$1')
+    .trim();
+}
+
+function mergeStreamingText(previous: string, next: string) {
+  const left = normalizeStreamingText(previous);
+  const right = normalizeStreamingText(next);
+  if (!left) return right;
+  if (!right || left === right || left.endsWith(right)) return left;
+  if (right.startsWith(left)) return right;
+
+  const maxOverlap = Math.min(left.length, right.length);
+  for (let size = maxOverlap; size >= 2; size -= 1) {
+    if (left.slice(-size) === right.slice(0, size)) {
+      return `${left}${right.slice(size)}`;
+    }
+  }
+  const needsSpace = /[A-Za-z0-9]$/.test(left) && /^[A-Za-z0-9]/.test(right);
+  return `${left}${needsSpace ? ' ' : ''}${right}`;
+}
+
+/** 讲解控制台只展示最新 50 条；完整记录由记录页分页读取。 */
+function mergeLatestLiveSubtitles(current: Subtitle[], incoming: Subtitle[]): Subtitle[] {
+  return Array.from(
+    new Map([...current, ...incoming].map(item => [item.id, item])).values(),
+  )
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .slice(-50);
+}
+
+function formatToolBadgeCount(count: number): string {
+  return count > 99 ? '99+' : String(Math.max(0, count));
+}
+
+function guideSubtitleSeenKey(roomId: string): string {
+  return `shiguang-guide-subtitle-seen-${roomId}`;
+}
+
+function readGuideSubtitleSeenAt(roomId: string): number {
+  try {
+    return Math.max(0, Number(localStorage.getItem(guideSubtitleSeenKey(roomId)) ?? 0));
+  } catch {
+    return 0;
+  }
+}
 
 // ─── 共享：当前导游活跃房间查询 Hook ──────────────────────
 type ActiveRoomState =
@@ -86,12 +157,12 @@ function Wave({ active = false }: { active?: boolean }) {
 
 // ─── 导游首页 ─────────────────────────────────────────
 /**
- * GuideHome 内层：已在 RoomPresenceProvider 内，可消费 Presence touristCount。
+ * GuideHome 内层：已在 RoomPresenceProvider 内，可消费非导游在线成员数。
  * 当前活跃房间的"在线游客"统计来自 Presence，不再使用 rooms.online_count。
  */
 function GuideHomeInner({ go }: Props) {
   const { user, profile, setCurrentRoom } = useAuth();
-  const { touristCount } = useRoomPresence();
+  const { participantCount } = useRoomPresence();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const activeRoomState = useActiveRoom(user?.id);
@@ -105,7 +176,7 @@ function GuideHomeInner({ go }: Props) {
   const activeRoom = activeRoomState.status === 'active' ? activeRoomState.room : null;
   const liveRoom = activeRoom?.status === 'live' ? activeRoom : null;
   const pendingRoom = activeRoom?.status === 'pending' ? activeRoom : null;
-  const historyRooms = rooms.filter(r => r.status === 'ended').slice(0, 3);
+  const historyRooms = rooms.filter(r => r.status === 'ended' || r.status === 'archived').slice(0, 3);
 
   const isCheckingActive = activeRoomState.status === 'loading';
   const isActiveError = activeRoomState.status === 'error';
@@ -121,23 +192,9 @@ function GuideHomeInner({ go }: Props) {
     }
   };
 
-  // 悬浮按钮文案
-  const fabLabel = isCheckingActive
-    ? '检查房间中'
-    : isActiveError
-      ? '加载失败，点击重试'
-      : activeRoom ? '返回讲解房' : '创建讲解房';
-
-  const handleFab = () => {
-    if (isActiveError && activeRoomState.status === 'error') {
-      activeRoomState.retry();
-      return;
-    }
-    handleEnterOrCreate();
-  };
-
   return (
-    <div className="screen padded-screen has-tabbar" style={{ paddingTop: 16 }}>
+    <div className="screen padded-screen has-tabbar guide-home-screen" style={{ paddingTop: 16 }}>
+      <div className="guide-page-scroll">
       <div className="guide-hero">
         <div>
           <p>你好，{profile?.nickname ?? profile?.username ?? '导游'} 👋</p>
@@ -149,7 +206,7 @@ function GuideHomeInner({ go }: Props) {
 
       {/* 统计：在线游客来自 Presence（唯一真值），历史数据保留 */}
       <div className="stats-grid guide-stats">
-        <div><span><UsersRound /></span><b>{activeRoom ? touristCount : 0}</b><small>在线游客</small></div>
+        <div><span><UsersRound /></span><b>{activeRoom ? participantCount : 0}</b><small>在线成员</small></div>
         <div><span><Clock3 /></span><b>{rooms.filter(r => r.status !== 'pending').length}</b><small>历史房间</small></div>
         <div><span><Landmark /></span><b>{rooms.length}</b><small>累计创建</small></div>
       </div>
@@ -157,9 +214,13 @@ function GuideHomeInner({ go }: Props) {
       {/* 当前房间 —— 加载中骨架 */}
       {isCheckingActive ? (
         <div className="current-room" style={{ opacity: 0.6 }}>
-          <div className="title-row">
-            <h3>当前讲解房</h3>
-            <b style={{ color: 'var(--muted)' }}><Loader2 size={13} className="spin-icon" />检查中…</b>
+          <div className="guide-current-heading">
+            <div className="guide-current-heading-copy">
+              <span>当前房间</span>
+              <h3>正在检查讲解状态</h3>
+              <p>马上为你恢复最近的讲解进度。</p>
+            </div>
+            <b className="guide-room-state is-checking"><Loader2 size={13} className="spin-icon" />检查中</b>
           </div>
           <button className="primary-button green" disabled style={{ opacity: 0.5 }}>
             检查房间中…
@@ -177,9 +238,13 @@ function GuideHomeInner({ go }: Props) {
         </div>
       ) : liveRoom ? (
         <div className="current-room">
-          <div className="title-row">
-            <h3>当前讲解房</h3>
-            <b><CircleDot />讲解中</b>
+          <div className="guide-current-heading">
+            <div className="guide-current-heading-copy">
+              <span>当前房间</span>
+              <h3>正在讲解的房间</h3>
+              <p>房间正在进行，返回控制台继续本场讲解。</p>
+            </div>
+            <b className="guide-room-state is-live"><CircleDot />讲解中</b>
           </div>
           <div className="current-room-main">
             <div className="guide-room-photo" />
@@ -187,7 +252,7 @@ function GuideHomeInner({ go }: Props) {
               <h2>{liveRoom.name}</h2>
               <span>房间号</span><strong>{liveRoom.room_number}</strong>
               {/* 在线人数来自 Presence，不使用 online_count */}
-              <p><UsersRound />{touristCount} 人在线</p>
+              <p><UsersRound />{participantCount} 人在线</p>
             </div>
           </div>
           <button className="primary-button green" onClick={handleEnterOrCreate}>
@@ -196,9 +261,13 @@ function GuideHomeInner({ go }: Props) {
         </div>
       ) : pendingRoom ? (
         <div className="current-room">
-          <div className="title-row">
-            <h3>待开始的讲解房</h3>
-            <b style={{ color: 'var(--amber)' }}>待开始</b>
+          <div className="guide-current-heading">
+            <div className="guide-current-heading-copy">
+              <span>当前房间</span>
+              <h3>待开始的讲解房</h3>
+              <p>房间已创建，准备好后即可开始本场讲解。</p>
+            </div>
+            <b className="guide-room-state is-pending">待开始</b>
           </div>
           <div className="current-room-main">
             <div className="guide-room-photo" />
@@ -206,7 +275,7 @@ function GuideHomeInner({ go }: Props) {
               <h2>{pendingRoom.name}</h2>
               <span>房间号</span><strong>{pendingRoom.room_number}</strong>
               {/* 在线人数来自 Presence，不使用 online_count */}
-              <p><UsersRound />{touristCount} 人在线</p>
+              <p><UsersRound />{participantCount} 人在线</p>
             </div>
           </div>
           <button className="primary-button green" onClick={handleEnterOrCreate}>
@@ -225,9 +294,12 @@ function GuideHomeInner({ go }: Props) {
       {/* 历史记录 */}
       {historyRooms.length > 0 && (
         <>
-          <div className="title-row history-heading">
-            <h3>历史讲解房</h3>
-            <button className="all-records-btn" onClick={() => go('records')}>全部记录 <ChevronRight size={14} /></button>
+          <div className="guide-history-heading">
+            <div>
+              <h3>历史讲解房</h3>
+              <p>回顾已结束房间与会议纪要</p>
+            </div>
+            <button className="all-records-btn" onClick={() => go('records')}>查看全部 <ChevronRight size={14} /></button>
           </div>
           <div className="history-room-list">
             {historyRooms.map(r => (
@@ -235,8 +307,8 @@ function GuideHomeInner({ go }: Props) {
                 <span className="history-photo history-photo-a" />
                 <p>
                   <strong>{r.name}</strong>
-                  <small>房间号 {r.room_number} · {r.online_count} 人</small>
-                  <small><Clock3 />{r.ended_at ? new Date(r.ended_at).toLocaleString('zh-CN') : ''}</small>
+                  <small>{r.room_number} · {r.online_count} 人</small>
+                  {r.ended_at && <small><Clock3 />{new Date(r.ended_at).toLocaleString('zh-CN')}</small>}
                 </p>
                 <b>已结束</b>
               </div>
@@ -244,18 +316,8 @@ function GuideHomeInner({ go }: Props) {
           </div>
         </>
       )}
+      </div>
 
-      {createPortal(
-        <button className="create-fab" onClick={handleFab} disabled={isCheckingActive}>
-          {isCheckingActive
-            ? <Loader2 size={16} className="spin-icon" />
-            : isActiveError
-              ? <AlertCircle size={16} />
-              : activeRoom ? <ChevronRight size={16} /> : <Plus />}
-          <span>{fabLabel}</span>
-        </button>,
-        document.querySelector('.mobile-app') ?? document.body
-      )}
       <BottomNav active="房间" go={go} variant="guide" />
     </div>
   );
@@ -295,6 +357,7 @@ export function CreateRoom({ go }: Props) {
   const [nameError, setNameError] = useState('');
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState(() => genPassword());
+  const [passwordVisible, setPasswordVisible] = useState(false);
   // 入口防御：复用共享 hook，不重复写业务判断
   const activeRoomState = useActiveRoom(user?.id);
   const [pwdError, setPwdError] = useState('');
@@ -392,9 +455,26 @@ export function CreateRoom({ go }: Props) {
       setCoverStatus('uploading');
       const coverUrl = await uploadRoomCoverBlob(user.id, room.id, coverBlob);
       if (coverUrl) {
-        await supabase.from('rooms').update({ cover_url: coverUrl }).eq('id', room.id);
-        finalRoom = { ...room, cover_url: coverUrl };
-        setCoverStatus('idle');
+        const persistCover = () => supabase
+          .from('rooms')
+          .update({ cover_url: coverUrl })
+          .eq('id', room.id)
+          .eq('guide_id', user.id)
+          .select('id,cover_url')
+          .maybeSingle();
+        let { data: coverRoom, error: coverDbError } = await persistCover();
+        if (coverDbError || !coverRoom) {
+          // 网络瞬时失败只重试一次；仍失败则保持数据库返回的默认封面状态。
+          ({ data: coverRoom, error: coverDbError } = await persistCover());
+        }
+        if (coverDbError || !coverRoom?.cover_url) {
+          setCoverStatus('error');
+          setCoverErrorMsg('房间已创建，但封面保存失败，已使用默认封面');
+          toast.warning('房间已创建，但封面未保存成功');
+        } else {
+          finalRoom = { ...room, cover_url: coverRoom.cover_url };
+          setCoverStatus('idle');
+        }
       } else {
         setCoverStatus('error');
         setCoverErrorMsg('封面上传失败，已使用默认封面');
@@ -507,7 +587,7 @@ export function CreateRoom({ go }: Props) {
   }
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen guide-create-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('guide-home')} aria-label="返回">
           <span className="back-chevron" />
@@ -582,15 +662,27 @@ export function CreateRoom({ go }: Props) {
       <div className="cr-section-card">
         <div className="cr-pwd-label-row">
           <b className="cr-label" style={{ marginBottom: 0 }}>房间密码<span className="cr-required">必填</span></b>
-          <button
-            className="cr-pwd-refresh-pill"
-            onClick={() => { setPassword(genPassword()); setPwdError(''); }}
-            type="button"
-          ><RefreshCw size={11} />随机生成</button>
+          <div className="cr-pwd-actions">
+            <button
+              className="cr-pwd-visibility"
+              onClick={() => setPasswordVisible(value => !value)}
+              type="button"
+              aria-label={passwordVisible ? '隐藏房间密码' : '显示房间密码'}
+            >
+              {passwordVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <button
+              className="cr-pwd-refresh-pill"
+              onClick={() => { setPassword(genPassword()); setPwdError(''); }}
+              type="button"
+            ><RefreshCw size={11} />随机生成</button>
+          </div>
         </div>
         <div className="create-code-row" style={{ marginTop: 12 }} onClick={() => pwdInputRef.current?.focus()}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <span key={i} className={password[i] ? 'filled' : ''}>{password[i] ?? ''}</span>
+            <span key={i} className={password[i] ? 'filled' : ''}>
+              {password[i] ? (passwordVisible ? password[i] : '•') : ''}
+            </span>
           ))}
         </div>
         <input
@@ -745,20 +837,23 @@ export function RoomSuccess({ go }: Props) {
         <span />
       </div>
 
-      <div className="success-mark-wrap">
-        <span className="success-mark"><Check /></span>
-        <i /><i /><i />
-      </div>
-      <h2>房间创建成功</h2>
-      <p>游客可通过房间号或分享链接加入，对方打开后需输入房间密码</p>
+      <section className="success-intro" aria-labelledby="room-created-title">
+        <div className="success-mark-wrap">
+          <span className="success-mark"><Check /></span>
+          <i /><i /><i />
+        </div>
+        <h2 id="room-created-title">房间创建成功</h2>
+        <p>游客可通过房间号或分享链接加入，对方打开后需输入房间密码</p>
+      </section>
 
       <div className="success-room-card">
         {/* 房间封面 16:9 */}
         <div className="success-room-cover-wrap">
-          {room.cover_url
-            ? <img src={room.cover_url} className="success-room-cover-img" alt="封面" />
-            : <div className="success-room-cover-placeholder" />
-          }
+          <img
+            src={room.cover_url || DEFAULT_ROOM_COVER_URL}
+            className="success-room-cover-img"
+            alt={`${room.name}房间封面`}
+          />
         </div>
         {/* 导游信息 */}
         <div className="success-room-info">
@@ -768,7 +863,7 @@ export function RoomSuccess({ go }: Props) {
             <h3>{room.name}</h3>
           </div>
         </div>
-        {/* 房间号 + 密码（从本次创建流程 sessionStorage 读取，不从 DB 读）+ 二维码 */}
+        {/* 房间号 + 密码（从本次创建流程 sessionStorage 读取，不从 DB 读） */}
         <div className="success-secret">
           <p>
             <span><Landmark size={14} />房间号</span>
@@ -778,10 +873,6 @@ export function RoomSuccess({ go }: Props) {
             <span><LockKeyhole size={14} />房间密码</span>
             <strong className="success-pwd-digits">{displayPwd || '——'}</strong>
           </p>
-          <div className="real-qr">
-            <QRCodeDataUrl text={inviteUrl} width={105} />
-            <p className="success-qr-hint">扫码进入房间（需输入密码）</p>
-          </div>
         </div>
       </div>
 
@@ -804,16 +895,26 @@ export function RoomSuccess({ go }: Props) {
 }
 
 // ─── 讲解控制台 ────────────────────────────────────────
-function GuideLiveInner({ go }: Props) {
+function GuideLiveInner({
+  go,
+  visible = true,
+  onSnapshot,
+}: Props & {
+  visible?: boolean;
+  onSnapshot?: (snapshot: GuideLiveSnapshot) => void;
+}) {
   const { user, profile, currentRoom, setCurrentRoom } = useAuth();
   const [members, setMembers] = useState<RoomMember[]>([]);
-  // Presence：导游侧订阅同一 topic，tourist 人数为唯一真值；导游不 track
-  const { touristCount } = useRoomPresence();
+  // 游客列表包含游客与摄影师，因此控制台统一使用非导游在线人数。
+  const { participantCount } = useRoomPresence();
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [barrages, setBarrages] = useState<Barrage[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [accumulatedMs, setAccumulatedMs] = useState(0);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endBusy, setEndBusy] = useState(false);
+  const [generateMinutesOnEnd, setGenerateMinutesOnEnd] = useState(true);
   const [pushedCount, setPushedCount] = useState(0);
   // Realtime 同步状态文案（'ok' | 'degraded'）
   const [realtimeSyncStatus, setRealtimeSyncStatus] = useState<'ok' | 'degraded'>('ok');
@@ -827,14 +928,123 @@ function GuideLiveInner({ go }: Props) {
   const AUDIO_SLICE_MS = 3000;
   const [isLive, setIsLive] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [processingCount, setProcessingCount] = useState(0);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+  const [unreadSubtitleCount, setUnreadSubtitleCount] = useState(0);
+  const knownSubtitleIdsRef = useRef<Set<string>>(new Set());
+  const subtitleSeenAtRef = useRef(0);
+  const unreadSubtitleRevisionRef = useRef(0);
+  const [liveDraft, setLiveDraft] = useState('');
+  const [asrMode, setAsrMode] = useState<'connecting' | 'streaming' | 'chunked'>('connecting');
   const [voiceError, setVoiceError] = useState('');
+  const [audioTransportMode, setAudioTransportMode] =
+    useState<'idle' | 'baidu' | 'direct' | 'failed'>('idle');
+  const [audioTransportDetail, setAudioTransportDetail] = useState('');
   const [micPerm, setMicPerm] = useState<'checking' | 'granted' | 'denied' | 'unknown'>('checking');
   const streamRef = useRef<MediaStream | null>(null);
   const isLiveRef = useRef(false);
+  const audioTransportWantedRef = useRef(false);
+  const sessionStartedAtRef = useRef<number | null>(null);
+  const accumulatedMsRef = useRef(0);
+  const lastClockPersistAtRef = useRef(0);
+  const lastDurationSyncMinuteRef = useRef(0);
   const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeMrRef = useRef<MediaRecorder | null>(null);
+  const streamingSessionRef = useRef<StreamingSpeechSession | null>(null);
+  const streamingFinalTasksRef = useRef<Set<Promise<unknown>>>(new Set());
+  const pendingStreamingFinalRef = useRef<{ roomId: string; text: string } | null>(null);
+  const pendingStreamingFinalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seenStreamingFinalKeysRef = useRef<Map<string, number>>(new Map());
+  const subtitleBroadcastRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  useEffect(() => {
+    if (!currentRoom) return;
+    onSnapshot?.({
+      roomId: currentRoom.id,
+      subtitles,
+      members,
+    });
+  }, [currentRoom?.id, members, onSnapshot, subtitles]);
+
+  const publishLiveDraft = useCallback((roomId: string, text: string) => {
+    setLiveDraft(text);
+    const channel = subtitleBroadcastRef.current;
+    if (roomId !== 'demo-room' && channel) {
+      void channel.send({
+        type: 'broadcast',
+        event: 'subtitle-draft',
+        payload: { room_id: roomId, text, updated_at: Date.now() },
+      });
+    }
+  }, []);
+
+  const persistStreamingFinal = useCallback((roomId: string, text: string) => {
+    const task = (async () => {
+      setProcessingCount(n => n + 1);
+      try {
+        await saveRecognizedText(roomId, text);
+      } catch (error) {
+        console.error('[Streaming ASR] 最终字幕保存失败:', error);
+        setVoiceError('流式字幕已识别，但保存失败，请检查字幕服务');
+      } finally {
+        setProcessingCount(n => Math.max(0, n - 1));
+      }
+    })();
+    streamingFinalTasksRef.current.add(task);
+    void task.finally(() => streamingFinalTasksRef.current.delete(task));
+    return task;
+  }, []);
+
+  const flushPendingStreamingFinal = useCallback((roomId?: string) => {
+    const pending = pendingStreamingFinalRef.current;
+    if (!pending || (roomId && pending.roomId !== roomId)) return Promise.resolve();
+    if (pendingStreamingFinalTimerRef.current) {
+      clearTimeout(pendingStreamingFinalTimerRef.current);
+      pendingStreamingFinalTimerRef.current = null;
+    }
+    pendingStreamingFinalRef.current = null;
+    publishLiveDraft(pending.roomId, '');
+    return persistStreamingFinal(pending.roomId, pending.text);
+  }, [persistStreamingFinal, publishLiveDraft]);
+
+  const queueStreamingFinal = useCallback((
+    roomId: string,
+    result: StreamingSpeechResult,
+  ) => {
+    const text = normalizeStreamingText(result.text);
+    if (!text) return;
+
+    const now = Date.now();
+    const finalKey = `${result.startTime ?? 'na'}:${result.endTime ?? 'na'}:${text}`;
+    for (const [key, seenAt] of seenStreamingFinalKeysRef.current) {
+      if (now - seenAt > 30_000) seenStreamingFinalKeysRef.current.delete(key);
+    }
+    // WebSocket 重连或 FINISH 收尾时可能重放相同 FIN_TEXT，只保存一次。
+    if (seenStreamingFinalKeysRef.current.has(finalKey)) return;
+    seenStreamingFinalKeysRef.current.set(finalKey, now);
+
+    const pending = pendingStreamingFinalRef.current;
+    if (pending && pending.roomId !== roomId) {
+      void flushPendingStreamingFinal(pending.roomId);
+    }
+    const previous = pending?.roomId === roomId ? pending.text : '';
+    const merged = mergeStreamingText(previous, text);
+    pendingStreamingFinalRef.current = { roomId, text: merged };
+    publishLiveDraft(roomId, merged);
+
+    if (pendingStreamingFinalTimerRef.current) {
+      clearTimeout(pendingStreamingFinalTimerRef.current);
+    }
+    // 给连续 FIN_TEXT 一个很短的合并窗口，避免一句话被拆成多张残缺卡片。
+    // 短片段多等一点，完整长句仍能快速落库。
+    const meaningfulLength = merged.replace(/[^\p{L}\p{N}]/gu, '').length;
+    const delay = meaningfulLength <= 6 ? 1_400 : 650;
+    pendingStreamingFinalTimerRef.current = setTimeout(() => {
+      pendingStreamingFinalTimerRef.current = null;
+      void flushPendingStreamingFinal(roomId);
+    }, delay);
+  }, [flushPendingStreamingFinal, publishLiveDraft]);
 
   /**
    * lastStopFlushRef — 解决 stop→onstop 异步竞态。
@@ -893,11 +1103,59 @@ function GuideLiveInner({ go }: Props) {
   // 景点卡片快捷推送面板（已移除，点击直接跳转卡片库）
 
   // WebRTC（导游是 owner）— initSignaling 现在返回 { unsub, waitSubscribed }
-  const { initSignaling, startMic, stopMic } = useWebRTC({
+  const {
+    initSignaling,
+    startMic: startDirectMic,
+    stopMic: stopDirectMic,
+  } = useWebRTC({
     roomId: currentRoom?.id ?? '',
     participantId: user?.id ?? '',
     isOwner: true,
   });
+  const baiduRtc = useBaiduRtc({
+    roomId: currentRoom?.id ?? '',
+    participantId: user?.id ?? '',
+    role: 'guide',
+    displayName: profile?.nickname || profile?.username || '导游',
+  });
+  const startAudioTransport = useCallback(async (stream: MediaStream) => {
+    let fallbackReason = '';
+    if (baiduRtc.configured) {
+      try {
+        const started = await baiduRtc.startPublisher(stream);
+        if (started) {
+          setAudioTransportMode('baidu');
+          setAudioTransportDetail('百度 RTC 正在传输中文原声');
+          return true;
+        }
+        fallbackReason = '百度 RTC 未返回成功状态';
+      } catch (error) {
+        if (!audioTransportWantedRef.current || !stream.getAudioTracks().some(track => track.readyState === 'live')) {
+          return false;
+        }
+        fallbackReason = error instanceof Error ? error.message : '百度 RTC 连接失败';
+        console.warn('[Baidu RTC] 启动失败，回退到直连 WebRTC:', error);
+      }
+    } else {
+      fallbackReason = '浏览器端未读取到百度 RTC AppID';
+    }
+    const directStarted = await startDirectMic(stream);
+    if (directStarted) {
+      setAudioTransportMode('direct');
+      setAudioTransportDetail(`已降级为直连 WebRTC：${fallbackReason}；跨网络稳定性无法保证`);
+      toast.warning('百度 RTC 不可用，已降级为直连 WebRTC');
+      return true;
+    }
+    setAudioTransportMode('failed');
+    setAudioTransportDetail(`百度 RTC 与直连 WebRTC 均未启动：${fallbackReason}`);
+    return false;
+  }, [baiduRtc.configured, baiduRtc.startPublisher, startDirectMic]);
+  const stopAudioTransport = useCallback(() => {
+    baiduRtc.stop();
+    stopDirectMic();
+    setAudioTransportMode('idle');
+    setAudioTransportDetail('');
+  }, [baiduRtc.stop, stopDirectMic]);
 
   // 初始化 WebRTC 信令
   useEffect(() => {
@@ -964,15 +1222,62 @@ function GuideLiveInner({ go }: Props) {
   // 房间数据 & 实时订阅
   useEffect(() => {
     if (!currentRoom) return;
+    let disposed = false;
+    setSubtitles([]);
+    setPushedCount(0);
+    setUnreadSubtitleCount(0);
+    knownSubtitleIdsRef.current = new Set();
+    subtitleSeenAtRef.current = readGuideSubtitleSeenAt(currentRoom.id);
+    unreadSubtitleRevisionRef.current = 0;
+
+    fetchSubtitlesSafe(currentRoom.id, 50).then(rows => {
+      if (disposed) return;
+      rows.forEach(row => knownSubtitleIdsRef.current.add(row.id));
+      setSubtitles(prev => {
+        const liveRows = prev.filter(
+          row => row.room_id === currentRoom.id && !rows.some(loaded => loaded.id === row.id),
+        );
+        return mergeLatestLiveSubtitles(rows, liveRows);
+      });
+    });
     fetchRoomMembersSafe(currentRoom.id).then(setMembers);
     fetchQuestions(currentRoom.id).then(setQuestions);
-    // 初始拉取已推送卡片数（新流程：kc_card_id 非空，与旧中间层 room_card_id 无关）
-    supabase.from('card_pushes').select('id', { count: 'exact', head: true })
-      .eq('room_id', currentRoom.id)
-      .not('kc_card_id', 'is', null)
-      .then(({ count }) => setPushedCount(count ?? 0));
+    fetchBarrages(currentRoom.id, 50).then(setBarrages);
 
-    const ch = supabase.channel(`guide-live-${currentRoom.id}`)
+    // 字幕徽章代表上次打开字幕记录后新增的字幕数，不受实时页 50 条缓存上限影响。
+    let unreadQuery = supabase
+      .from('subtitles')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', currentRoom.id);
+    if (subtitleSeenAtRef.current > 0) {
+      unreadQuery = unreadQuery.gt(
+        'created_at',
+        new Date(subtitleSeenAtRef.current).toISOString(),
+      );
+    }
+    const unreadQueryRevision = unreadSubtitleRevisionRef.current;
+    unreadQuery.then(({ count, error }) => {
+      if (
+        !disposed
+        && !error
+        && unreadSubtitleRevisionRef.current === unreadQueryRevision
+      ) {
+        setUnreadSubtitleCount(count ?? 0);
+      }
+    });
+
+    // 已推送卡片数始终回查数据库权威值，避免初始查询与 Realtime +1 产生漂移。
+    const refreshPushedCount = async () => {
+      const { count, error } = await supabase
+        .from('card_pushes')
+        .select('id', { count: 'exact', head: true })
+        .eq('room_id', currentRoom.id)
+        .not('kc_card_id', 'is', null);
+      if (!disposed && !error) setPushedCount(count ?? 0);
+    };
+    void refreshPushedCount();
+
+    const ch = supabase.channel(`room-live-${currentRoom.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'questions', filter: `room_id=eq.${currentRoom.id}` },
         payload => {
           const q = payload.new as Question;
@@ -982,21 +1287,39 @@ function GuideLiveInner({ go }: Props) {
             return [q, ...prev];
           });
         })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_barrages', filter: `room_id=eq.${currentRoom.id}` },
+        payload => {
+          const barrage = payload.new as Barrage;
+          setBarrages(prev => [barrage, ...prev.filter(item => item.id !== barrage.id)].slice(0, 50));
+        })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'room_members', filter: `room_id=eq.${currentRoom.id}` },
         () => fetchRoomMembersSafe(currentRoom.id).then(setMembers))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'card_pushes', filter: `room_id=eq.${currentRoom.id}` },
         payload => {
           // 只统计新流程推送（kc_card_id 非空，与旧中间层 room_card_id 无关）
           if ((payload.new as { kc_card_id?: string }).kc_card_id) {
-            setPushedCount(prev => prev + 1);
+            void refreshPushedCount();
           }
         });
+    subtitleBroadcastRef.current = ch;
+
+    const applySubtitleChange = (s: Subtitle, source: SubtitleChangeSource = 'insert') => {
+      const isNewSubtitle = !knownSubtitleIdsRef.current.has(s.id);
+      knownSubtitleIdsRef.current.add(s.id);
+      setSubtitles(prev => mergeLatestLiveSubtitles(prev, [s]));
+      if (
+        isNewSubtitle
+        && source !== 'update'
+        && source !== 'poll-update'
+        && new Date(s.created_at).getTime() > subtitleSeenAtRef.current
+      ) {
+        unreadSubtitleRevisionRef.current += 1;
+        setUnreadSubtitleCount(prev => prev + 1);
+      }
+    };
 
     // 将字幕监听合并到同一 channel，减少独立 subtitles channel 的数据库连接占用
-    const subtitleCleanup = attachSubtitleListener(ch, currentRoom.id, s => setSubtitles(prev =>
-      [...prev.filter(item => item.id !== s.id), s]
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    ));
+    const subtitleCleanup = attachSubtitleListener(ch, currentRoom.id, applySubtitleChange);
 
     // 使用 subscribeWithFallback：连接异常时自动降级为 3s 增量轮询，恢复后停止轮询
     const fbCleanup = subscribeWithFallback(
@@ -1006,41 +1329,137 @@ function GuideLiveInner({ go }: Props) {
       setRealtimeSyncStatus,
       s => {
         // 轮询新字幕同步更新导游字幕预览（fingerprint 去重已在 subscribeWithFallback 内处理）
-        setSubtitles(prev =>
-          [...prev.filter(item => item.id !== s.id), s]
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-        );
+        applySubtitleChange(s);
       }
     );
 
-    return () => { subtitleCleanup.unsubscribe(); fbCleanup.unsubscribe(); supabase.removeChannel(ch); };
+    return () => {
+      disposed = true;
+      if (subtitleBroadcastRef.current === ch) subtitleBroadcastRef.current = null;
+      subtitleCleanup.unsubscribe();
+      fbCleanup.unsubscribe();
+      supabase.removeChannel(ch);
+    };
   }, [currentRoom?.id]);
 
-  // 讲解计时：仅当本次会话已实际开始（isLive=true 或 sessionStorage 有本房间记录）时才倒数。
-  // ready 状态（isLive=false 且无 sessionStorage 记录）始终显示 00:00:00。
+  // 字幕记录页打开或在可见状态收到新字幕时，会广播“已读”状态。
   useEffect(() => {
     if (!currentRoom) return;
-    const storageKey = `shiguang-live-start-${currentRoom.id}`;
-    // 只采信 sessionStorage（本次标签页操作写入的真实开始时刻）
-    // 不读 currentRoom.started_at：避免重新进入旧 live 房间时从历史时间算起
-    const fromSession = Number(sessionStorage.getItem(storageKey) || 0);
-    const startedAt = (Number.isFinite(fromSession) && fromSession > 0) ? fromSession : null;
-    setSessionStartedAt(startedAt);
+    const onSeen = (event: Event) => {
+      const detail = (event as CustomEvent<{ roomId: string; seenAt: number }>).detail;
+      if (!detail || detail.roomId !== currentRoom.id) return;
+      subtitleSeenAtRef.current = Math.max(subtitleSeenAtRef.current, detail.seenAt);
+      unreadSubtitleRevisionRef.current += 1;
+      setUnreadSubtitleCount(0);
+    };
+    window.addEventListener('shiguang-guide-subtitles-seen', onSeen);
+    return () => window.removeEventListener('shiguang-guide-subtitles-seen', onSeen);
   }, [currentRoom?.id]);
 
-  // handleStart 写入 sessionStorage 后需更新计时器起点（不依赖 currentRoom?.started_at 重触发）
-  const applySessionStart = useCallback((ms: number) => {
-    setSessionStartedAt(ms);
-  }, []);
+  // 讲解计时采用「累计有效时长 + 当前活动片段起点」模型。
+  // 暂停时冻结累计值，恢复后开启新片段，暂停期间不会被计入讲解时长。
+  useEffect(() => {
+    if (!currentRoom) return;
+    const storageKey = `shiguang-live-clock-${currentRoom.id}`;
+    let restoredAccumulatedMs = Math.max(0, Number(currentRoom.actual_duration ?? 0) * 60_000);
+    try {
+      const raw = localStorage.getItem(storageKey) ?? sessionStorage.getItem(storageKey) ?? '{}';
+      const saved = JSON.parse(raw) as {
+        accumulatedMs?: number;
+        segmentStartedAt?: number | null;
+        lastHeartbeatAt?: number | null;
+      };
+      const savedAccumulated = Number(saved.accumulatedMs ?? 0);
+      if (Number.isFinite(savedAccumulated) && savedAccumulated >= restoredAccumulatedMs) {
+        restoredAccumulatedMs = savedAccumulated;
+      }
+      // 只累计至最后一次心跳，避免关闭页面数小时后再次打开时把离线时间误算为讲解时间。
+      const staleSegmentStartedAt = Number(saved.segmentStartedAt ?? 0);
+      const lastHeartbeatAt = Number(saved.lastHeartbeatAt ?? staleSegmentStartedAt);
+      if (
+        Number.isFinite(staleSegmentStartedAt) && staleSegmentStartedAt > 0
+        && Number.isFinite(lastHeartbeatAt) && lastHeartbeatAt >= staleSegmentStartedAt
+      ) {
+        restoredAccumulatedMs += Math.max(0, lastHeartbeatAt - staleSegmentStartedAt);
+      }
+    } catch {
+      restoredAccumulatedMs = 0;
+    }
+    accumulatedMsRef.current = restoredAccumulatedMs;
+    sessionStartedAtRef.current = null;
+    setAccumulatedMs(restoredAccumulatedMs);
+    setSessionStartedAt(null);
+    setElapsed(Math.floor(restoredAccumulatedMs / 1000));
+    lastDurationSyncMinuteRef.current = Math.floor(restoredAccumulatedMs / 60_000);
+    localStorage.setItem(storageKey, JSON.stringify({
+      accumulatedMs: restoredAccumulatedMs,
+      segmentStartedAt: null,
+      lastHeartbeatAt: Date.now(),
+    }));
+    sessionStorage.removeItem(storageKey);
+  }, [currentRoom?.id]);
 
   useEffect(() => {
-    // 仅在 live 且有明确起点时运行计时器；非 live 时 elapsed 归零
-    if (!sessionStartedAt || !isLive) { setElapsed(0); return; }
-    const updateElapsed = () => setElapsed(Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 1000)));
+    if (!sessionStartedAt || !isLive) {
+      setElapsed(Math.floor(accumulatedMs / 1000));
+      return;
+    }
+    const activeSegmentStartedAt = sessionStartedAt;
+    const updateElapsed = () => {
+      const activeMs = Math.max(0, Date.now() - activeSegmentStartedAt);
+      const totalMs = accumulatedMs + activeMs;
+      setElapsed(Math.floor(totalMs / 1000));
+      const now = Date.now();
+      if (now - lastClockPersistAtRef.current >= 5_000 && currentRoom) {
+        lastClockPersistAtRef.current = now;
+        localStorage.setItem(`shiguang-live-clock-${currentRoom.id}`, JSON.stringify({
+          accumulatedMs,
+          segmentStartedAt: activeSegmentStartedAt,
+          lastHeartbeatAt: now,
+        }));
+      }
+      const wholeMinutes = Math.floor(totalMs / 60_000);
+      if (currentRoom && wholeMinutes > lastDurationSyncMinuteRef.current) {
+        lastDurationSyncMinuteRef.current = wholeMinutes;
+        void updateRoomDuration(currentRoom.id, wholeMinutes);
+      }
+    };
     updateElapsed();
     const timer = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(timer);
-  }, [sessionStartedAt, isLive]);
+  }, [accumulatedMs, currentRoom?.id, isLive, sessionStartedAt]);
+
+  const persistClock = useCallback((nextAccumulatedMs: number, segmentStartedAt: number | null) => {
+    if (!currentRoom) return;
+    localStorage.setItem(`shiguang-live-clock-${currentRoom.id}`, JSON.stringify({
+      accumulatedMs: nextAccumulatedMs,
+      segmentStartedAt,
+      lastHeartbeatAt: Date.now(),
+    }));
+  }, [currentRoom?.id]);
+
+  const startClockSegment = useCallback(() => {
+    const now = Date.now();
+    sessionStartedAtRef.current = now;
+    setSessionStartedAt(now);
+    persistClock(accumulatedMsRef.current, now);
+  }, [persistClock]);
+
+  const pauseClock = useCallback(() => {
+    const segmentStart = sessionStartedAtRef.current;
+    const nextAccumulatedMs = accumulatedMsRef.current
+      + (segmentStart ? Math.max(0, Date.now() - segmentStart) : 0);
+    accumulatedMsRef.current = nextAccumulatedMs;
+    sessionStartedAtRef.current = null;
+    setAccumulatedMs(nextAccumulatedMs);
+    setSessionStartedAt(null);
+    setElapsed(Math.floor(nextAccumulatedMs / 1000));
+    persistClock(nextAccumulatedMs, null);
+    if (currentRoom) {
+      void updateRoomDuration(currentRoom.id, Math.floor(nextAccumulatedMs / 60_000));
+    }
+    return nextAccumulatedMs;
+  }, [currentRoom?.id, persistClock]);
 
   const fmt = (s: number) => {
     const h = Math.floor(s / 3600).toString().padStart(2, '0');
@@ -1059,6 +1478,7 @@ function GuideLiveInner({ go }: Props) {
     activeMrRef.current = mr;
     mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     mr.onstop = () => {
+      if (activeMrRef.current === mr) activeMrRef.current = null;
       // ─── 修复竞态：严格保证 enqueueAsr → startCycle 的顺序 ───────────
       // 旧顺序（错误）：先 startCycle（替换 activeMrRef）→ 再 enqueueAsr
       //   — 新周期已开始录音，旧 Blob 入队时序不确定，若外部代码以 activeMrRef
@@ -1094,6 +1514,7 @@ function GuideLiveInner({ go }: Props) {
   // 开始同声传译（ASR 录音独立启动，WebRTC 中文原声推流并行进行）
   const handleStart = async () => {
     if (!currentRoom) { toast.error('请先进入房间'); return; }
+    if (isStarting || isStopping || isLiveRef.current) return;
 
     try {
       setVoiceError('');
@@ -1104,16 +1525,22 @@ function GuideLiveInner({ go }: Props) {
         audio: { echoCancellation: true, noiseSuppression: true },
       });
       streamRef.current = stream;
+      audioTransportWantedRef.current = true;
+      // getUserMedia 成功即代表本次真实授权可用。Permissions API 在部分浏览器中
+      // 仍可能停留在 prompt/unknown，因此这里必须同步页面状态。
+      setMicPerm('granted');
 
       // ③ WebRTC/BRTC 推流启动（非阻断：失败只报 warning，不阻断字幕链路，
       //    starting 状态继续保持直到 DB 写入成功）
-      startMic(stream).then(micStarted => {
+      startAudioTransport(stream).then(micStarted => {
+        if (!audioTransportWantedRef.current) return;
         if (!micStarted) {
           const msg = '中文原声推流失败，字幕仍在生成中';
           setVoiceError(msg);
           toast.warning(msg);
         }
       }).catch(err => {
+        if (!audioTransportWantedRef.current) return;
         const msg = `中文原声推流异常：${err instanceof Error ? err.message : '未知错误'}，字幕仍在生成中`;
         setVoiceError(msg);
         toast.warning(msg);
@@ -1122,7 +1549,6 @@ function GuideLiveInner({ go }: Props) {
       // ④ 房间状态写入（pending → live 首次才写；已 live 的房间不重写 started_at）
       if (currentRoom.status !== 'live') {
         const startedAt = new Date().toISOString();
-        const startedMs = new Date(startedAt).getTime();
         const { error: dbErr } = await updateRoomStatus(currentRoom.id, 'live', { started_at: startedAt });
         if (dbErr) {
           // DB 写入失败 → 完整回滚，保持 starting=false/isLive=false → failed
@@ -1130,42 +1556,80 @@ function GuideLiveInner({ go }: Props) {
           streamRef.current = null;
           isLiveRef.current = false;
           setIsStarting(false);
-          stopMic();
+          stopAudioTransport();
           const msg = '开始讲解失败（数据库更新错误），请稍后重试';
           setVoiceError(msg);
           toast.error(msg);
           return;
         }
-        // ⑤ DB 成功 → 写入 sessionStorage，此时才切换到 live，计时器正式启动
-        sessionStorage.setItem(`shiguang-live-start-${currentRoom.id}`, String(startedMs));
-        setSessionStartedAt(startedMs);
+        // ⑤ DB 成功 → 更新房间状态
         setCurrentRoom({ ...currentRoom, status: 'live', started_at: startedAt });
-        applySessionStart(startedMs);
       }
 
       // ⑥ 完整流程成功：isStarting → false，isLive → true
+      startClockSegment();
       isLiveRef.current = true;
       setIsLive(true);
       setIsStarting(false);
 
-      // ⑦ ASR 分片录音独立启动（不依赖 WebRTC 推流结果）
-      startCycle(stream, currentRoom.id);
-      toast.success('中文原声、双语字幕与英文语音生成已开始');
+      // ⑦ 优先启动百度 WebSocket 流式识别；配置或鉴权失败时自动回退到 3 秒短语音切片。
+      setAsrMode('connecting');
+      let fallbackStarted = false;
+      const fallbackToChunkedAsr = (reason: string) => {
+        if (!isLiveRef.current || fallbackStarted) return;
+        fallbackStarted = true;
+        streamingSessionRef.current?.cancel();
+        streamingSessionRef.current = null;
+        void flushPendingStreamingFinal(currentRoom.id);
+        setAsrMode('chunked');
+        startCycle(stream, currentRoom.id);
+        setVoiceError(`流式字幕暂不可用，已切换兼容识别：${reason}`);
+        toast.warning('百度流式识别暂不可用，已自动切换短语音字幕');
+      };
+      try {
+        const streamingSession = await startStreamingSpeech(stream, {
+          onPartial: ({ text }) => {
+            const pending = pendingStreamingFinalRef.current;
+            const draft = pending?.roomId === currentRoom.id
+              ? mergeStreamingText(pending.text, text)
+              : normalizeStreamingText(text);
+            publishLiveDraft(currentRoom.id, draft);
+          },
+          onFinal: result => queueStreamingFinal(currentRoom.id, result),
+          onError: fallbackToChunkedAsr,
+        });
+        if (!isLiveRef.current) {
+          streamingSession.cancel();
+        } else if (!fallbackStarted) {
+          streamingSessionRef.current = streamingSession;
+          setAsrMode('streaming');
+          setVoiceError('');
+          toast.success('中文原声、百度流式字幕、英文翻译与语音合成已开始');
+        } else {
+          streamingSession.cancel();
+        }
+      } catch (streamingError) {
+        fallbackToChunkedAsr(
+          streamingError instanceof Error ? streamingError.message : '连接失败',
+        );
+      }
     } catch (err) {
       // 任意步骤抛出异常 → 完整回滚 → failed
       isLiveRef.current = false;
+      audioTransportWantedRef.current = false;
       setIsLive(false);
       setIsStarting(false);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
-      stopMic();
+      stopAudioTransport();
       let friendlyMsg = '无法启动语音讲解，请稍后重试';
       if (err instanceof Error) {
         const name = (err as DOMException).name ?? '';
         const msg = err.message.toLowerCase();
         if (name === 'NotAllowedError' || msg.includes('not allowed') || msg.includes('permission') || msg.includes('denied')) {
+          setMicPerm('denied');
           friendlyMsg = '麦克风权限被拒绝，请在浏览器地址栏左侧允许麦克风权限后重试';
         } else if (name === 'NotFoundError' || msg.includes('not found') || msg.includes('no device')) {
           friendlyMsg = '未检测到麦克风设备，请检查设备连接后重试';
@@ -1178,15 +1642,13 @@ function GuideLiveInner({ go }: Props) {
     }
   };
 
-  // ─── 等待 FIFO 队列排空（最长 15 秒）────────────────────────────────
+  // ─── 等待 FIFO 队列完整排空。每个 ASR 请求自身有超时，不在这里提前截断。────
   const waitQueueDrain = useCallback((): Promise<void> => {
     return new Promise(resolve => {
-      const deadline = Date.now() + 15_000;
       const check = () => {
         if (asrQueueRef.current.length === 0 && !processorRunningRef.current) {
           resolve(); return;
         }
-        if (Date.now() >= deadline) { resolve(); return; }
         setTimeout(check, 200);
       };
       check();
@@ -1211,24 +1673,50 @@ function GuideLiveInner({ go }: Props) {
 
   // 停止同声传译（停录音；已入队片段继续处理完毕）
   const handleStop = async () => {
-    // 1. 先 arm flush Promise（stop() 前），再置 isLiveRef=false 阻止 onstop 重启
-    const flushDone = armStopFlush();
+    if (isStopping || !isLiveRef.current) return;
+    setIsStopping(true);
+    const streamingSession = streamingSessionRef.current;
+    streamingSessionRef.current = null;
+    // 短语音回退模式需等待 MediaRecorder onstop 入队；流式模式由 FINISH 帧触发最终结果。
+    const flushDone = streamingSession ? Promise.resolve() : armStopFlush();
     isLiveRef.current = false;
+    audioTransportWantedRef.current = false;
     setIsLive(false);
+    pauseClock();
     if (cycleTimerRef.current) { clearTimeout(cycleTimerRef.current); cycleTimerRef.current = null; }
     if (activeMrRef.current?.state === 'recording') activeMrRef.current.stop();
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
-    stopMic();
-    // 2. 等待 onstop 把最后一段推入队列（不等 ASR 完成，队列继续串行消费）
-    await flushDone;
-    toast.info('实时讲解已暂停，最后一段字幕正在生成…');
+    const streamToStop = streamRef.current;
+    streamRef.current = null;
+    stopAudioTransport();
+    streamToStop?.getTracks().forEach(track => track.stop());
+    try {
+      if (streamingSession) await streamingSession.stop();
+      if (currentRoom) await flushPendingStreamingFinal(currentRoom.id);
+      // 2. 等待 onstop 把最后一段推入队列（不等 ASR 完成，队列继续串行消费）
+      await flushDone;
+      toast.info('实时讲解已暂停，最后一段字幕正在生成…');
+    } finally {
+      setIsStopping(false);
+    }
   };
 
   useEffect(() => () => {
+    if (isLiveRef.current) pauseClock();
     isLiveRef.current = false;
+    audioTransportWantedRef.current = false;
+    streamingSessionRef.current?.cancel();
+    streamingSessionRef.current = null;
+    if (pendingStreamingFinalTimerRef.current) {
+      clearTimeout(pendingStreamingFinalTimerRef.current);
+      pendingStreamingFinalTimerRef.current = null;
+    }
+    const pendingFinal = pendingStreamingFinalRef.current;
+    pendingStreamingFinalRef.current = null;
+    if (pendingFinal) void saveRecognizedText(pendingFinal.roomId, pendingFinal.text);
     if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-  }, []);
+    stopAudioTransport();
+  }, [pauseClock, stopAudioTransport]);
 
   // currentRoom 缺失或房间已结束 → useEffect 安全返回首页，禁止在 render 中直接调用 go
   useEffect(() => {
@@ -1260,55 +1748,102 @@ function GuideLiveInner({ go }: Props) {
   };
 
   const handleEndSession = async () => {
-    if (!currentRoom) return;
+    if (!currentRoom || endBusy) return;
     setEndBusy(true);
 
-    // 1. arm flush Promise（必须在 stop() 之前）
-    const flushDone = armStopFlush();
+    const streamingSession = streamingSessionRef.current;
+    streamingSessionRef.current = null;
+    // 1. 短语音模式 arm flush；流式模式稍后发送 FINISH。
+    const flushDone = streamingSession ? Promise.resolve() : armStopFlush();
 
     // 2. 停止录音（isLiveRef=false 防止 onstop 重启下一段）
     isLiveRef.current = false;
+    audioTransportWantedRef.current = false;
     setIsLive(false);
+    const finalAccumulatedMs = pauseClock();
     if (cycleTimerRef.current) { clearTimeout(cycleTimerRef.current); cycleTimerRef.current = null; }
     if (activeMrRef.current?.state === 'recording') activeMrRef.current.stop();
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
-    stopMic();
+    const streamToStop = streamRef.current;
+    streamRef.current = null;
+    stopAudioTransport();
+    streamToStop?.getTracks().forEach(track => track.stop());
 
-    // 3. 等待 onstop 完成 enqueueAsr（最后一段已进入 FIFO）
-    await flushDone;
+    try {
+      if (streamingSession) await streamingSession.stop();
+      await flushPendingStreamingFinal(currentRoom.id);
 
-    // 4. 等待 FIFO 队列排空（最长 15 秒，含 flush 时间）
-    await waitQueueDrain();
-    const timedOut = asrQueueRef.current.length > 0 || processorRunningRef.current;
+      // 3. 等待 onstop 完成 enqueueAsr（最后一段已进入 FIFO）
+      await flushDone;
 
-    // 5. 写 ended
-    await updateRoomStatus(currentRoom.id, 'ended', { ended_at: new Date().toISOString() });
-    sessionStorage.removeItem(`shiguang-live-start-${currentRoom.id}`);
-    setEndBusy(false);
-    setCurrentRoom(null);
-    if (timedOut) {
-      toast.warning('房间已结束，最后一段字幕可能仍在处理中');
-    } else {
-      toast.success('讲解已结束');
+      // 4. 等待所有中文字幕写入，再等待英文翻译与英文 TTS 全部完成。
+      await waitQueueDrain();
+      await Promise.allSettled([...streamingFinalTasksRef.current]);
+      const { failedCount: enrichmentFailedCount } =
+        await waitForSubtitleEnrichment(currentRoom.id);
+
+      // 5. 只有数据库确认 ended 后，才清理本地房间并提示成功。
+      const { error: endError } = await updateRoomStatus(currentRoom.id, 'ended', {
+        ended_at: new Date().toISOString(),
+        actual_duration: finalAccumulatedMs > 0 ? Math.ceil(finalAccumulatedMs / 60_000) : 0,
+      });
+      if (endError) {
+        toast.error(`解散房间失败：${endError}`);
+        return;
+      }
+
+      let minutesGenerated = false;
+      let minutesCloudSaved = false;
+      if (generateMinutesOnEnd) {
+        const allSubtitles = await fetchAllSubtitles(currentRoom.id, user?.id);
+        const generatedMinutes = generateMeetingMinutes(currentRoom, allSubtitles);
+        saveMeetingMinutes(generatedMinutes);
+        if (user?.id) {
+          try {
+            await saveMeetingMinutesCloud(generatedMinutes, user.id);
+            minutesCloudSaved = true;
+          } catch {
+            minutesCloudSaved = false;
+          }
+        }
+        minutesGenerated = true;
+      }
+
+      localStorage.removeItem(`shiguang-live-clock-${currentRoom.id}`);
+      sessionStorage.removeItem(`shiguang-live-clock-${currentRoom.id}`);
+      sessionStorage.removeItem(`shiguang-live-start-${currentRoom.id}`);
+      setCurrentRoom(null);
+      if (enrichmentFailedCount > 0) {
+        toast.warning(`房间已结束；${enrichmentFailedCount} 条英文语音生成失败，中文字幕已保存`);
+      } else if (minutesGenerated && !minutesCloudSaved) {
+        toast.warning('讲解已结束，会议纪要已保存在本机；云端持久化待数据库迁移生效');
+      } else {
+        toast.success(minutesGenerated ? '讲解已结束，会议纪要已生成' : '讲解已结束');
+      }
+      go('records');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '未知错误';
+      toast.error(`解散房间失败：${message}`);
+    } finally {
+      setEndBusy(false);
     }
-    go('guide-home');
   };
 
-  // 真实可达状态：ready（未开始/停止后）| starting（启动中）| live（讲解中）| ended（房间已结束）| failed（启动失败）
-  // handleStop 后 isLive=false、voiceError='' → 落入 ready，无 paused 状态
-  type LectureUiState = 'ready' | 'starting' | 'live' | 'ended' | 'failed';
+  type LectureUiState = 'ready' | 'starting' | 'live' | 'stopping' | 'paused' | 'ended' | 'failed';
   const lectureUiState = useMemo<LectureUiState>(() => {
     if (currentRoom.status === 'ended') return 'ended';
+    if (isStopping) return 'stopping';
     if (isStarting) return 'starting';
     if (isLive) return 'live';
+    if (accumulatedMs > 0) return 'paused';
     if (voiceError) return 'failed';
     return 'ready';
-  }, [currentRoom.status, isStarting, isLive, voiceError]);
+  }, [accumulatedMs, currentRoom.status, isStarting, isLive, isStopping, voiceError]);
 
   // ── 合并实时内容区：字幕 + 提问按时间升序排列，稳定 key，ID 去重
   type ContentItem =
     | { kind: 'subtitle'; id: string; ts: number; data: Subtitle }
-    | { kind: 'question'; id: string; ts: number; data: Question };
+    | { kind: 'question'; id: string; ts: number; data: Question }
+    | { kind: 'barrage'; id: string; ts: number; data: Barrage };
 
   const contentItems = useMemo<ContentItem[]>(() => {
     const subs: ContentItem[] = subtitles.map(s => ({
@@ -1317,23 +1852,38 @@ function GuideLiveInner({ go }: Props) {
     const qs: ContentItem[] = questions.map(q => ({
       kind: 'question', id: `q-${q.id}`, ts: new Date(q.created_at).getTime(), data: q,
     }));
-    return [...subs, ...qs].sort((a, b) => a.ts - b.ts);
-  }, [subtitles, questions]);
+    const barrageItems: ContentItem[] = barrages.map(item => ({
+      kind: 'barrage', id: `barrage-${item.id}`, ts: new Date(item.created_at).getTime(), data: item,
+    }));
+    return [...subs, ...qs, ...barrageItems].sort((a, b) => a.ts - b.ts);
+  }, [barrages, subtitles, questions]);
 
-  // ── 实时内容区：新内容到达时在用户接近底部时自动滚至底部
+  // ── 实时内容区：默认持续跟随最新内容；用户主动上滑时暂停跟随
   const contentScrollRef = useRef<HTMLDivElement>(null);
-  const prevItemCountRef = useRef(0);
-  useEffect(() => {
+  const contentEndRef = useRef<HTMLDivElement>(null);
+  const [contentAutoFollow, setContentAutoFollow] = useState(true);
+
+  const handleContentScroll = useCallback(() => {
     const el = contentScrollRef.current;
-    if (!el || contentItems.length === prevItemCountRef.current) return;
-    prevItemCountRef.current = contentItems.length;
-    const threshold = 80; // px
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-    if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [contentItems]);
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setContentAutoFollow(distanceFromBottom <= 64);
+  }, []);
+
+  const scrollContentToLatest = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    setContentAutoFollow(true);
+    const el = contentScrollRef.current;
+    el?.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  useEffect(() => {
+    if (!contentAutoFollow) return;
+    const el = contentScrollRef.current;
+    el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [contentItems, liveDraft, contentAutoFollow]);
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen guide-live-screen" style={visible ? undefined : { display: 'none' }}>
       <div className="mini-header">
         <button className="back-button" onClick={() => go('guide-home')} aria-label="返回">
           <span className="back-chevron" />
@@ -1346,7 +1896,7 @@ function GuideLiveInner({ go }: Props) {
 
       {/* 在线人数来自 Presence（唯一真值） */}
       <p className="room-meta">
-        房间号 {currentRoom.room_number} · 在线 <b>{touristCount}</b> 人
+        房间号 {currentRoom.room_number} · 在线 <b>{participantCount}</b> 人
       </p>
 
       {/* 房间密码板块 */}
@@ -1369,36 +1919,42 @@ function GuideLiveInner({ go }: Props) {
         )}
       </div>
 
-      {/* 导游信息卡：所有文案/状态由 lectureUiState 单一驱动 */}
+      {/* 导游信息与语音操作合并为一个控制台，状态仍由 lectureUiState 单一驱动 */}
+      <section className={`guide-voice-console ${lectureUiState === 'live' ? 'is-live' : ''}`}>
       <div className="live-host-card">
         <Avatar url={profile?.avatar_url} />
         <div className="live-host-copy">
           <div className="host-name-row">
             <h2>{profile?.nickname ?? '导游'}</h2>
             <span
-              className={`live-label ${lectureUiState === 'live' ? 'is-live' : lectureUiState === 'starting' ? 'is-starting' : 'is-ready'}`}
+              className={`live-label ${lectureUiState === 'live' ? 'is-live' : lectureUiState === 'starting' || lectureUiState === 'stopping' ? 'is-starting' : 'is-ready'}`}
               aria-live="polite"
             >
               <CircleDot />
               {lectureUiState === 'live'     ? '正在讲解'
                 : lectureUiState === 'starting' ? '正在连接'
+                : lectureUiState === 'stopping' ? '正在暂停'
+                : lectureUiState === 'paused'   ? '已暂停'
                 : lectureUiState === 'ended'    ? '已结束'
                 : lectureUiState === 'failed'   ? '连接失败'
                 :                                 '设备已就绪'}
             </span>
           </div>
           <Wave active={lectureUiState === 'live'} />
-          {/* 计时器：live 时运行计时；ready/starting/failed/ended 显示 00:00:00 */}
           <strong className="timer" aria-label="讲解时长">
-            {lectureUiState === 'live' ? fmt(elapsed) : '00:00:00'}
+            {fmt(elapsed)}
           </strong>
           <p>
             {lectureUiState === 'live'
               ? '中文原声讲解中 · 字幕实时生成'
               : lectureUiState === 'starting'
               ? '正在建立连接，请稍候…'
-              : touristCount > 0
-              ? `${touristCount} 位游客在线 · 准备讲解`
+              : lectureUiState === 'stopping'
+              ? '正在保存最后一段字幕…'
+              : lectureUiState === 'paused'
+              ? '讲解已暂停 · 可继续本次讲解'
+              : participantCount > 0
+              ? `${participantCount} 位成员在线 · 准备讲解`
               : '准备讲解 · 暂无游客在线'}
           </p>
         </div>
@@ -1414,9 +1970,16 @@ function GuideLiveInner({ go }: Props) {
               <Loader2 size={12} className="spin-icon" />处理中 {processingCount} 段
             </span>
           )}
+          {lectureUiState === 'live' && (
+            <span className={`streaming-mode-chip ${asrMode}`}>
+              {asrMode === 'streaming' ? '百度流式字幕'
+                : asrMode === 'connecting' ? '流式连接中'
+                : '兼容字幕'}
+            </span>
+          )}
         </div>
         <div className="mic-center">
-          {(micPerm === 'denied' || micPerm === 'unknown') && (
+          {lectureUiState !== 'live' && (micPerm === 'denied' || micPerm === 'unknown') && (
             <div className={`mic-perm-banner ${micPerm}`}>
               {micPerm === 'denied' ? <MicOff size={14} /> : <Mic size={14} />}
               <span>
@@ -1426,7 +1989,7 @@ function GuideLiveInner({ go }: Props) {
               </span>
             </div>
           )}
-          {lectureUiState === 'starting' ? (
+          {lectureUiState === 'starting' || lectureUiState === 'stopping' ? (
             <button className="mic-fab" disabled aria-label="正在连接" aria-busy="true">
               <Loader2 size={26} className="spin-icon" />
             </button>
@@ -1438,7 +2001,7 @@ function GuideLiveInner({ go }: Props) {
             <button
               className="mic-fab"
               onClick={handleStart}
-              aria-label={lectureUiState === 'failed' ? '重新开始讲解' : '开始讲解'}
+              aria-label={lectureUiState === 'paused' ? '继续讲解' : lectureUiState === 'failed' ? '重新开始讲解' : '开始讲解'}
               disabled={lectureUiState === 'ended'}
             >
               <Mic size={30} />
@@ -1447,6 +2010,8 @@ function GuideLiveInner({ go }: Props) {
           <strong className="mic-action-title">
             {lectureUiState === 'live'     ? '正在传输中文原声'
               : lectureUiState === 'starting' ? '正在连接，请稍候'
+              : lectureUiState === 'stopping' ? '正在暂停，请稍候'
+              : lectureUiState === 'paused'   ? '点击继续语音讲解'
               : lectureUiState === 'failed'   ? '点击重新开始讲解'
               :                                 '点击开始语音讲解'}
           </strong>
@@ -1455,6 +2020,16 @@ function GuideLiveInner({ go }: Props) {
               ? '游客实时收听中文；英文语音与双语字幕同步生成'
               : '系统将自动生成中英字幕及英文语音'}
           </p>
+          {audioTransportMode !== 'idle' && (
+            <p
+              className={`audio-transport-notice ${audioTransportMode}`}
+              role={audioTransportMode === 'direct' || audioTransportMode === 'failed' ? 'alert' : 'status'}
+            >
+              {audioTransportMode === 'baidu' ? '百度 RTC' : audioTransportMode === 'direct' ? '直连降级模式' : '原声传输失败'}
+              {' · '}
+              {audioTransportDetail}
+            </p>
+          )}
           {voiceError && (
             <div className="voice-error-block" role="alert">
               <p className="voice-error-msg">{voiceError}</p>
@@ -1462,26 +2037,39 @@ function GuideLiveInner({ go }: Props) {
           )}
         </div>
       </div>
+      </section>
 
       <div className="guide-tools">
         <button onClick={() => go('guest-list')}>
           <span className="tool-icon-wrap">
             <UsersRound />
-            {touristCount > 0 && <i className="tool-badge">{touristCount}</i>}
+            {participantCount > 0 && (
+              <i className="tool-badge" aria-label={`${participantCount} 位成员在线`}>
+                {formatToolBadgeCount(participantCount)}
+              </i>
+            )}
           </span>
           游客列表
         </button>
         <button onClick={() => go('guide-subtitle-record')}>
           <span className="tool-icon-wrap">
             <Languages />
-            {subtitles.length > 0 && <i className="tool-badge">{subtitles.length}</i>}
+            {unreadSubtitleCount > 0 && (
+              <i className="tool-badge" aria-label={`${unreadSubtitleCount} 条新增字幕`}>
+                {formatToolBadgeCount(unreadSubtitleCount)}
+              </i>
+            )}
           </span>
           字幕记录
         </button>
         <button onClick={() => go('card-library')}>
           <span className="tool-icon-wrap">
             <Landmark />
-            {pushedCount > 0 && <i className="tool-badge">{pushedCount}</i>}
+            {pushedCount > 0 && (
+              <i className="tool-badge" aria-label={`已推送 ${pushedCount} 张景点卡片`}>
+                {formatToolBadgeCount(pushedCount)}
+              </i>
+            )}
           </span>
           景点卡片
         </button>
@@ -1500,35 +2088,62 @@ function GuideLiveInner({ go }: Props) {
             {realtimeSyncStatus === 'ok' ? '同步中' : '恢复中…'}
           </span>
         </h4>
-        {/* aria-live="polite"：新内容到达时由辅助技术通报，不打断当前朗读 */}
-        <div
-          className="live-content-stream__list"
-          ref={contentScrollRef}
-          aria-live="polite"
-          aria-label="实时字幕与游客提问"
-        >
-          {contentItems.length === 0 ? (
-            <p className="live-content-stream__empty">
-              {lectureUiState === 'live' ? '识别中，字幕即将出现…' : '开始讲解后字幕与提问将在此实时显示'}
-            </p>
-          ) : contentItems.map(item =>
-            item.kind === 'subtitle' ? (
-              <article key={item.id} className="lcs-bubble lcs-bubble--subtitle" aria-label="字幕">
-                <p className="lcs-bubble__main">{(item.data as Subtitle).content_cn}</p>
-                {(item.data as Subtitle).content_en && (
-                  <p className="lcs-bubble__sub">{(item.data as Subtitle).content_en}</p>
-                )}
+        <div className="live-content-stream__viewport">
+          {/* aria-live="polite"：新内容到达时由辅助技术通报，不打断当前朗读 */}
+          <div
+            className="live-content-stream__list"
+            ref={contentScrollRef}
+            onScroll={handleContentScroll}
+            aria-live="polite"
+            aria-label="实时字幕与游客提问"
+          >
+            {contentItems.length === 0 && !liveDraft ? (
+              <p className="live-content-stream__empty">
+                {lectureUiState === 'live' ? '识别中，字幕即将出现…' : '开始讲解后字幕与提问将在此实时显示'}
+              </p>
+            ) : contentItems.map(item =>
+              item.kind === 'subtitle' ? (
+                <article key={item.id} className="lcs-bubble lcs-bubble--subtitle" aria-label="字幕">
+                  <p className="lcs-bubble__main">{(item.data as Subtitle).content_cn}</p>
+                  {(item.data as Subtitle).content_en && (
+                    <p className="lcs-bubble__sub">{(item.data as Subtitle).content_en}</p>
+                  )}
+                </article>
+              ) : item.kind === 'question' ? (
+                <article key={item.id} className="lcs-bubble lcs-bubble--question" aria-label="游客提问">
+                  <p className="lcs-bubble__main">
+                    {`${(item.data as Question).profile?.nickname?.trim() || '游客'}：${(item.data as Question).content}`}
+                  </p>
+                  {(item.data as Question).translated_text && (
+                    <p className="lcs-bubble__sub">{(item.data as Question).translated_text}</p>
+                  )}
+                </article>
+              ) : (
+                <article key={item.id} className="lcs-bubble lcs-bubble--barrage" aria-label="游客弹幕">
+                  <p className="lcs-bubble__main">
+                    {`${(item.data as Barrage).profile?.nickname?.trim() || '游客'}：${(item.data as Barrage).content}`}
+                  </p>
+                  <span className="lcs-bubble__tag">弹幕</span>
+                </article>
+              )
+            )}
+            {liveDraft && (
+              <article className="lcs-bubble lcs-bubble--subtitle lcs-bubble--draft" aria-label="正在识别的字幕">
+                <p className="lcs-bubble__main">{liveDraft}</p>
+                <span>识别中…</span>
               </article>
-            ) : (
-              <article key={item.id} className="lcs-bubble lcs-bubble--question" aria-label="游客提问">
-                <p className="lcs-bubble__main">
-                  {`${(item.data as Question).profile?.nickname?.trim() || '游客'}：${(item.data as Question).content}`}
-                </p>
-                {(item.data as Question).translated_text && (
-                  <p className="lcs-bubble__sub">{(item.data as Question).translated_text}</p>
-                )}
-              </article>
-            )
+            )}
+            <div ref={contentEndRef} aria-hidden="true" />
+          </div>
+          {!contentAutoFollow && (
+            <button
+              type="button"
+              className="live-content-stream__latest"
+              onClick={() => scrollContentToLatest()}
+            >
+              <ChevronDown size={14} />
+              回到最新
+            </button>
           )}
         </div>
       </div>
@@ -1536,16 +2151,48 @@ function GuideLiveInner({ go }: Props) {
       {/* 解散房间确认弹窗 */}
       {showEndConfirm && (
         <div className="end-confirm-overlay" onClick={() => !endBusy && setShowEndConfirm(false)}>
-          <div className="end-confirm-sheet" onClick={e => e.stopPropagation()}>
-            <div className="end-confirm-icon"><LogOut size={26} /></div>
-            <h3>确认解散房间？</h3>
-            <p>结束后游客将无法继续收听，讲解记录将被保存。</p>
-            <div className="end-confirm-actions">
-              <button className="end-confirm-cancel" onClick={() => setShowEndConfirm(false)} disabled={endBusy}>取消</button>
-              <button className="end-confirm-ok" onClick={handleEndSession} disabled={endBusy}>
-                {endBusy ? '正在保存最后一段…' : '确认解散'}
-              </button>
-            </div>
+          <div
+            className={`end-confirm-sheet${endBusy ? ' is-processing' : ''}`}
+            onClick={e => e.stopPropagation()}
+          >
+            {endBusy ? (
+              <div className="ai-minutes-progress" role="status" aria-live="polite">
+                <div className="ai-minutes-spinner" aria-hidden="true">
+                  <Loader2 size={38} />
+                  <span />
+                </div>
+                <h3>{generateMinutesOnEnd ? 'AI正在生成中～' : '正在结束讲解～'}</h3>
+                <p>
+                  {generateMinutesOnEnd
+                    ? '正在整理全部字幕，并完成英文翻译与语音处理'
+                    : '正在保存字幕，并完成英文翻译与语音处理'}
+                </p>
+                <div className="ai-minutes-dots" aria-hidden="true">
+                  <i /><i /><i />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="end-confirm-icon"><LogOut size={26} /></div>
+                <h3>确认解散房间？</h3>
+                <p>结束后游客将无法继续收听，讲解记录将被保存。</p>
+                <label className="end-minutes-option">
+                  <input
+                    type="checkbox"
+                    checked={generateMinutesOnEnd}
+                    onChange={event => setGenerateMinutesOnEnd(event.target.checked)}
+                  />
+                  <span>
+                    <b>根据全部字幕生成会议纪要</b>
+                    <small>生成后可在“记录”中查看</small>
+                  </span>
+                </label>
+                <div className="end-confirm-actions">
+                  <button className="end-confirm-cancel" onClick={() => setShowEndConfirm(false)}>取消</button>
+                  <button className="end-confirm-ok" onClick={handleEndSession}>确认解散</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1555,66 +2202,31 @@ function GuideLiveInner({ go }: Props) {
 
 /**
  * GuideLive 外层：挂载导游侧 Presence 订阅（仅订阅，不 track，role='guide'）。
- * 与 GuestList 共享同一 topic（room-presence-{roomId}），切换页面时分别独立创建实例；
- * 两者不会同时渲染（ScreenRouter 路由互斥），不存在重复 channel 问题。
+ * 在讲解工具页切换期间由 ScreenRouter 提供共享 Provider，避免同名频道重复订阅；
+ * 单独进入本页面时仍保留自身 Provider。
  */
-export function GuideLive({ go }: Props) {
+export function GuideLive({
+  go,
+  visible = true,
+  onSnapshot,
+  presenceProvided = false,
+}: Props & {
+  visible?: boolean;
+  onSnapshot?: (snapshot: GuideLiveSnapshot) => void;
+  presenceProvided?: boolean;
+}) {
   const { currentRoom, user } = useAuth();
+  if (presenceProvided) {
+    return <GuideLiveInner go={go} visible={visible} onSnapshot={onSnapshot} />;
+  }
   return (
     <RoomPresenceProvider
       roomId={currentRoom?.id ?? ''}
       userId={user?.id ?? ''}
       role="guide"
     >
-      <GuideLiveInner go={go} />
+      <GuideLiveInner go={go} visible={visible} onSnapshot={onSnapshot} />
     </RoomPresenceProvider>
-  );
-}
-
-// ─── 结束确认 ─────────────────────────────────────────
-export function EndConfirm({ go }: Props) {
-  const { currentRoom, setCurrentRoom, profile } = useAuth();
-  const [busy, setBusy] = useState(false);
-
-  const handleEnd = async () => {
-    if (!currentRoom) return;
-    setBusy(true);
-    await updateRoomStatus(currentRoom.id, 'ended', {
-      ended_at: new Date().toISOString(),
-    });
-    sessionStorage.removeItem(`shiguang-live-start-${currentRoom.id}`);
-    setBusy(false);
-    setCurrentRoom(null);
-    toast.success('讲解已结束');
-    go('guide-home');
-  };
-
-  return (
-    <div className="screen padded-screen modal-page">
-      <div className="end-background">
-        <div className="end-guide-head">
-          <Avatar url={profile?.avatar_url} />
-          <div>
-            <h2>导游控制台</h2>
-            <p>{currentRoom?.name}</p>
-            <small>房间号 {currentRoom?.room_number}</small>
-          </div>
-        </div>
-      </div>
-
-      <div className="sheet-modal exact-end-sheet">
-        <i className="sheet-handle" />
-        <h2>结束本次讲解？</h2>
-        <p>游客将停止接收语音、字幕记录保留。</p>
-        <label>✓　结束后生成讲解记录</label>
-        <button className="danger-button" onClick={handleEnd} disabled={busy}>
-          {busy ? '结束中…' : '确认结束'}
-        </button>
-        <button className="continue-button" onClick={() => go('guide-live')}>
-          继续讲解
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -1628,12 +2240,13 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ active, go, variant = 'tour' }: BottomNavProps) {
+  const { t } = useAppLanguage();
   const navMap: Record<string, NavItem[]> = {
-    guide:        [[Landmark, '房间', 'guide-home'], [History, '记录', 'records'], [UsersRound, '我的', 'my']],
-    tour:         [[Landmark, '房间', 'room-list'],  [History, '最近', 'recent-rooms'], [UsersRound, '我的', 'tourist-my']],
-    visitorHome:  [[Landmark, '房间', 'room-list'],  [History, '最近', 'recent-rooms'], [UsersRound, '我的', 'tourist-my']],
-    photographer: [[Landmark, '任务', 'photographer-tasks'], [Images, '相册', 'photographer-album'], [UsersRound, '我的', 'photographer-my']],
-    room:         [[Headphones, '语音', 'listening'], [AlignLeft, '字幕', 'subtitle-tab'], [ImageIcon, '相册', 'room-album']],
+    guide:        [[DoorOpen, '房间', 'guide-home'], [History, '记录', 'records'], [CircleUserRound, '我的', 'my']],
+    tour:         [[DoorOpen, '房间', 'room-list'],  [History, '最近', 'recent-rooms'], [CircleUserRound, '我的', 'tourist-my']],
+    visitorHome:  [[DoorOpen, '房间', 'room-list'],  [History, '最近', 'recent-rooms'], [CircleUserRound, '我的', 'tourist-my']],
+    photographer: [[Camera, '任务', 'photographer-tasks'], [Images, '相册', 'photographer-album'], [CircleUserRound, '我的', 'photographer-my']],
+    room:         [[Headphones, '语音', 'listening'], [Captions, '字幕', 'subtitle-tab'], [Images, '相册', 'room-album']],
   };
   const items = navMap[variant] ?? navMap.tour;
 
@@ -1644,9 +2257,10 @@ export function BottomNav({ active, go, variant = 'tour' }: BottomNavProps) {
           key={name as string}
           className={active === name ? 'active' : ''}
           onClick={() => go?.(target as string)}
+          aria-label={t(name)}
         >
-          <Icon aria-hidden="true" />
-          <span>{name}</span>
+          <Icon size={22} strokeWidth={1.9} aria-hidden="true" />
+          <span>{t(name)}</span>
         </button>
       ))}
     </div>

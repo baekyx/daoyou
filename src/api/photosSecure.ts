@@ -41,3 +41,18 @@ export async function fetchPhotosSafe(
   if (error || !data) return [];
   return Array.isArray(data) ? (data as PhotoWithPhotographer[]) : [];
 }
+
+/** 严格读取版：保留请求错误，供需要展示失败状态的管理页面使用。 */
+export async function fetchPhotosSafeStrict(
+  roomId: string,
+  limit = 50,
+  before?: string
+): Promise<PhotoWithPhotographer[]> {
+  const { data, error } = await supabase.rpc("get_room_photos", {
+    p_room_id: roomId,
+    p_limit: Math.min(Math.max(limit, 1), 200),
+    p_before: before ?? null,
+  });
+  if (error) throw new Error(error.message || "照片读取失败");
+  return Array.isArray(data) ? (data as PhotoWithPhotographer[]) : [];
+}

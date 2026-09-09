@@ -19,8 +19,8 @@
   --white: #ffffff;
   --danger: #c94c3f;
   --shadow: 0 14px 44px rgba(36, 64, 47, 0.1);
-  --type-caption: 11px;
-  --type-meta: 12px;
+  --type-caption: 12px;
+  --type-meta: 13px;
   --type-body: 14px;
   --type-body-strong: 16px;
   --type-section: 18px;
@@ -28,6 +28,340 @@
   --type-display: 28px;
   --leading-tight: 1.25;
   --leading-body: 1.55;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   导游端 V2：参照摄影师端的移动 H5 视觉层级
+   仅调整表现，不改变页面路由、按钮行为和数据链路。
+   ═══════════════════════════════════════════════════════════════════ */
+.mobile-app {
+  --guide-ink: #153d2b;
+  --guide-muted: #71877a;
+  --guide-soft: #eef6f1;
+  --guide-line: #d8e6dc;
+  --guide-card: #ffffff;
+  --guide-shadow: 0 10px 30px rgba(30, 74, 47, .07);
+}
+
+.mobile-app > .screen:is(
+  .guide-create-screen,
+  .guide-live-screen,
+  .success-screen,
+  .end-result-screen,
+  .guest-list-screen,
+  .guide-subtitle-record-screen,
+  .kc-library-screen,
+  .kc-detail-screen,
+  .rec-detail-page,
+  .support-page,
+  .help-feedback-screen
+) {
+  padding: 0 18px 28px;
+  background:
+    radial-gradient(circle at 96% 4%, rgba(207, 235, 217, .48), transparent 28%),
+    #f7f6f1;
+  color: var(--guide-ink);
+}
+
+.mobile-app > .screen:is(
+  .guide-create-screen,
+  .guide-live-screen,
+  .success-screen,
+  .guest-list-screen,
+  .guide-subtitle-record-screen,
+  .kc-library-screen,
+  .kc-detail-screen,
+  .rec-detail-page,
+  .support-page,
+  .help-feedback-screen
+) > .mini-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 58px;
+  margin: 0 -18px 18px;
+  padding: 0 18px;
+  background: rgba(247, 246, 241, .92);
+  border-bottom: 1px solid rgba(216, 230, 220, .7);
+  backdrop-filter: blur(16px);
+}
+
+.mobile-app > .screen:is(
+  .guide-create-screen,
+  .guide-live-screen,
+  .success-screen,
+  .guest-list-screen,
+  .guide-subtitle-record-screen,
+  .kc-library-screen,
+  .kc-detail-screen,
+  .rec-detail-page,
+  .support-page,
+  .help-feedback-screen
+) > .mini-header strong {
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: -.01em;
+}
+
+.mobile-app > .screen:is(
+  .guide-create-screen,
+  .guide-live-screen,
+  .success-screen,
+  .guest-list-screen,
+  .guide-subtitle-record-screen,
+  .kc-library-screen,
+  .kc-detail-screen,
+  .rec-detail-page,
+  .support-page,
+  .help-feedback-screen
+) .back-button {
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+}
+
+/* 首页保留人物抠图与三项数据组件，只统一比例和内容节奏。 */
+.guide-home-screen > .guide-page-scroll { padding-top: 18px; }
+.guide-home-screen .guide-hero {
+  min-height: 188px;
+  padding: 22px 20px;
+  border: 1px solid #d3e7da;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #f2faf5 0%, #e0f1e6 100%);
+  box-shadow: var(--guide-shadow);
+  overflow: visible;
+}
+.guide-home-screen .guide-hero p { font-size: 14px; font-weight: 700; color: #3f7455; }
+.guide-home-screen .guide-hero h1 { margin-top: 8px; font-size: 30px; letter-spacing: -.035em; }
+.guide-home-screen .guide-hero span { color: #678074; }
+.guide-home-screen .guide-stats {
+  position: relative;
+  z-index: 3;
+  margin-top: -8px;
+  background: linear-gradient(135deg, #1f7f4d, #32935f);
+  box-shadow: 0 16px 28px rgba(31, 127, 77, .18);
+}
+.guide-home-screen .current-room,
+.guide-home-screen .history-room-list > div {
+  border: 1px solid var(--guide-line);
+  background: rgba(255, 255, 255, .94);
+  box-shadow: var(--guide-shadow);
+}
+.guide-home-screen .history-heading { margin-top: 22px; }
+.guide-home-screen .all-records-btn { min-height: 44px; padding-inline: 8px; }
+
+/* 创建、成功和结束状态。 */
+.guide-create-screen .cr-section-card,
+.guide-create-screen .cr-privacy-card,
+.success-screen .success-room-card {
+  border: 1px solid var(--guide-line);
+  box-shadow: var(--guide-shadow);
+}
+.guide-create-screen .cr-section-card { border-radius: 18px; }
+.guide-create-screen .cr-label { font-size: 15px; color: var(--guide-ink); }
+.guide-create-screen .cr-field-hint,
+.guide-create-screen .cr-privacy-body p { font-size: 12px; line-height: 1.55; }
+.guide-create-screen .cr-cover-area { min-height: 142px; border-radius: 15px; }
+.guide-create-screen .primary-button { min-height: 50px; border-radius: 15px; font-size: 16px; }
+
+.success-screen { text-align: center; }
+.success-screen .success-mark-wrap { margin-top: 8px; }
+.success-screen > h2 { margin: 12px 0 6px; font-size: 24px; color: var(--guide-ink); }
+.success-screen > p { max-width: 310px; margin: 0 auto 18px; color: var(--guide-muted); font-size: 13px; line-height: 1.6; }
+.success-screen .success-room-card { overflow: hidden; border-radius: 22px; text-align: left; }
+.success-screen .success-actions button { min-height: 48px; }
+
+.end-result-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding-bottom: 40px !important;
+  text-align: center;
+}
+.end-result-screen .end-result-checkmark {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 22px;
+  border-radius: 28px;
+  background: #e7f3eb;
+  box-shadow: var(--guide-shadow);
+}
+.end-result-screen .end-check-icon { width: 52px; height: 52px; }
+.end-result-screen .end-result-title { margin: 0; font-size: 26px; }
+.end-result-screen .end-result-sub { margin: 10px auto 26px; color: var(--guide-muted); font-size: 13px; line-height: 1.6; }
+.end-result-screen .end-stats-grid { gap: 12px; margin-bottom: 26px; }
+.end-result-screen .end-stat-card { min-height: 112px; border: 1px solid var(--guide-line); border-radius: 18px; box-shadow: var(--guide-shadow); }
+.end-result-screen .primary-button { min-height: 50px; border-radius: 15px; }
+
+/* 讲解控制台：把房间、讲解和工具区分成清晰的三级结构。 */
+.guide-live-screen { overflow-y: auto; }
+.guide-live-screen .live-room-head { margin-bottom: 14px; }
+.guide-live-screen .live-host-card {
+  border: 1px solid var(--guide-line);
+  border-radius: 22px;
+  background: linear-gradient(145deg, #fff 0%, #f0f8f3 100%);
+  box-shadow: var(--guide-shadow);
+}
+.guide-live-screen .voice-control-card,
+.guide-live-screen .guide-tool-grid,
+.guide-live-screen .guide-tool-row {
+  border: 1px solid var(--guide-line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: var(--guide-shadow);
+}
+.guide-live-screen button { touch-action: manipulation; }
+.guide-live-screen .guide-tool-grid button,
+.guide-live-screen .guide-tool-row button { min-height: 72px; }
+
+/* 游客、字幕与卡片工具页。 */
+.guest-list-screen .member-stats-row { gap: 12px; margin-bottom: 14px; }
+.guest-list-screen .member-stat {
+  min-height: 84px;
+  border: 1px solid var(--guide-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--guide-shadow);
+}
+.guest-list-screen .member-stat b { font-size: 24px; }
+.guest-list-screen .member-tab-row button { min-height: 44px; border-radius: 14px; }
+.guest-list-screen .member-search-wrap,
+.kc-library-screen .kc-search-wrap {
+  min-height: 48px;
+  border: 1px solid var(--guide-line);
+  border-radius: 15px;
+  background: #fff;
+}
+.guest-list-screen .member-item { min-height: 70px; border: 1px solid var(--guide-line); border-radius: 16px; background: #fff; }
+.guest-list-screen .empty-state,
+.guide-subtitle-record-screen .empty-state,
+.kc-library-screen .empty-state,
+.kc-detail-screen .empty-state {
+  min-height: 300px;
+  margin-top: 16px;
+  border: 1px dashed #cbded1;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .58);
+}
+.guest-list-screen .empty-title,
+.guide-subtitle-record-screen .empty-title,
+.kc-library-screen .empty-title,
+.kc-detail-screen .empty-title { font-size: 16px; color: #577162; }
+
+.guide-subtitle-record-screen .guide-subtitle-note {
+  margin: 0 0 14px;
+  padding: 13px 14px;
+  border: 1px solid #dce9e0;
+  border-radius: 14px;
+  background: #edf5f0;
+  color: #617c6c;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.guide-subtitle-record-screen .guide-subtitle-list { gap: 10px; }
+.guide-subtitle-record-screen .guide-subtitle-item { border: 1px solid var(--guide-line); border-radius: 16px; background: #fff; box-shadow: 0 6px 18px rgba(30, 74, 47, .05); }
+
+.kc-library-screen .mini-header > button:last-child { min-width: 44px; min-height: 44px; }
+.kc-library-screen .kc-category-row { gap: 8px; margin: 0 -18px 16px; padding: 2px 18px 8px; overflow-x: auto; scrollbar-width: none; }
+.kc-library-screen .kc-category-row::-webkit-scrollbar { display: none; }
+.kc-library-screen .kc-category-row button { flex: 0 0 auto; min-height: 38px; padding-inline: 14px; }
+.kc-library-screen .kc-item { border: 1px solid var(--guide-line); border-radius: 18px; box-shadow: var(--guide-shadow); }
+.kc-library-screen .kc-title { font-size: 16px; }
+.kc-detail-screen .kc-detail-article { padding: 4px 2px 40px; }
+.kc-detail-screen .kc-detail-img,
+.kc-detail-screen .kc-detail-img-placeholder { border: 1px solid var(--guide-line); border-radius: 20px; box-shadow: var(--guide-shadow); }
+.kc-detail-screen .kc-detail-title-cn { font-size: 25px; letter-spacing: -.02em; }
+.kc-detail-screen .kc-detail-cn,
+.kc-detail-screen .kc-detail-en { line-height: 1.8; }
+
+/* 记录页：统计是概览，房间和唯一动作是主体。 */
+.rec-page > .rec-page-scroll { padding-top: 10px; }
+.rec-page .rec-stats-row { gap: 8px; }
+.rec-page .rec-stat-card { border: 1px solid var(--guide-line); border-radius: 15px; background: #fff; box-shadow: 0 6px 18px rgba(30, 74, 47, .045); }
+.rec-page .rec-filter-tabs { min-height: 48px; padding: 4px; border: 1px solid var(--guide-line); border-radius: 16px; background: #fff; }
+.rec-page .rec-filter-tab { min-height: 40px; border-radius: 12px; }
+.rec-page .rec-room-card { align-items: flex-start; border: 1px solid var(--guide-line); background: #fff; box-shadow: var(--guide-shadow); }
+.rec-page .rec-room-cover { width: 64px; height: 64px; border-radius: 13px; }
+.rec-page .rec-room-body { min-width: 0; }
+.rec-page .rec-room-meta { row-gap: 5px; font-size: 12px; }
+.rec-page .rec-room-action { width: 100%; justify-content: center; margin-top: 10px; border-radius: 12px; }
+.rec-detail-page .minutes-paper { border: 1px solid var(--guide-line); border-radius: 22px; box-shadow: var(--guide-shadow); }
+.rec-detail-page .record-transcript-item { border-radius: 16px; box-shadow: 0 5px 16px rgba(30, 74, 47, .04); }
+
+/* 导游我的：复用摄影师端的分组逻辑，并保留导游入口。 */
+.guide-my-screen { padding: 0 !important; background: #f7f6f1; overflow: hidden; }
+.guide-my-screen > .my-page-scroll-pass-through { padding: 0 18px 28px; }
+.guide-my-screen .mini-header {
+  top: 0;
+  min-height: 58px;
+  margin: 0 -18px;
+  padding: 0 18px;
+  background: rgba(247, 246, 241, .94);
+}
+.guide-my-screen .my-hero {
+  min-height: 216px;
+  margin: 0 -18px 18px;
+  padding: 26px 18px 22px;
+  border-radius: 0 0 28px 28px;
+  background:
+    radial-gradient(circle at 83% 22%, rgba(255,255,255,.72) 0 38px, transparent 39px),
+    linear-gradient(145deg, #eef8f2, #dcefe3);
+}
+.guide-my-screen .my-avatar-wrap,
+.guide-my-screen .my-avatar { width: 88px; height: 88px; }
+.guide-my-screen .my-name { margin-top: 10px; font-size: 24px; }
+.guide-my-screen .my-section-card { border-radius: 20px; }
+.guide-settings-groups { display: grid; gap: 16px; margin-top: 16px; }
+.guide-settings-group > h3 { margin: 0 0 8px 4px; color: #6d8377; font-size: 13px; font-weight: 700; }
+.guide-my-screen .my-menu-item { min-height: 54px; }
+.guide-my-screen .my-menu-icon { width: 38px; height: 38px; border-radius: 12px; }
+.guide-my-screen .my-signout-btn { margin-top: 20px; }
+.guide-my-screen .my-version { margin-bottom: 4px; }
+
+/* 支持页和通知页采用同一信息密度。 */
+.support-page .support-notice-item,
+.help-feedback-screen .support-faq-card,
+.help-feedback-screen .feedback-card {
+  border: 1px solid var(--guide-line);
+  border-radius: 18px;
+  box-shadow: var(--guide-shadow);
+}
+.support-page .support-notice-item { min-height: 84px; }
+.help-feedback-screen .support-faq-question { min-height: 52px; font-size: 14px; }
+.help-feedback-screen .feedback-chip { min-height: 38px; }
+.help-feedback-screen .support-submit-btn { border-radius: 15px; }
+
+@container mobile-shell (max-width: 360px) {
+  .mobile-app > .screen:is(
+    .guide-create-screen,
+    .guide-live-screen,
+    .success-screen,
+    .end-result-screen,
+    .guest-list-screen,
+    .guide-subtitle-record-screen,
+    .kc-library-screen,
+    .kc-detail-screen,
+    .rec-detail-page,
+    .support-page,
+    .help-feedback-screen
+  ) { padding-inline: 14px; }
+
+  .guide-home-screen .guide-hero { min-height: 174px; padding: 18px 16px; }
+  .guide-home-screen .guide-hero h1 { font-size: 26px; }
+  .guide-home-screen .guide-stats { margin-top: -4px; }
+  .guide-home-screen .current-room { padding: 14px; }
+  .guide-live-screen .live-host-card { padding-inline: 12px; }
+  .rec-page .rec-stats-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .rec-page .rec-stat-card { min-height: 66px; padding-inline: 3px; }
+  .rec-page .rec-stat-label { font-size: 10px; }
+  .rec-page .rec-room-card { padding: 12px; }
+  .guide-my-screen > .my-page-scroll-pass-through { padding-inline: 14px; }
+  .guide-my-screen .mini-header,
+  .guide-my-screen .my-hero { margin-inline: -14px; }
+  .guide-my-screen .mini-header { padding-inline: 14px; }
 }
 
 * { box-sizing: border-box; }
@@ -195,7 +529,7 @@ button { color: inherit; }
 .guide-tools span { width: 39px; height: 39px; border-radius: 14px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; font-size: 18px; }
 /* 工具栏图标容器（含徽章） */
 .tool-icon-wrap { position: relative; width: 39px; height: 39px; border-radius: 14px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
-.tool-badge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #e84040; color: #fff; font-size: 10px; font-style: normal; font-weight: 700; line-height: 16px; text-align: center; border: 1.5px solid #fff; pointer-events: none; }
+.tool-badge { position: absolute; top: -6px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #e84040; color: #fff; font-size: 10px; font-style: normal; font-weight: 800; line-height: 18px; text-align: center; white-space: nowrap; border: 1.5px solid #fff; box-shadow: 0 2px 5px rgba(175, 30, 30, .2); pointer-events: none; }
 
 /* 景点卡片快捷推送面板 */
 .question-stream { display: grid; gap: 7px; margin-top: 14px; }
@@ -756,10 +1090,30 @@ div.create-guide-photo { background: url('/ui-source/create-room.webp') -31px -5
 .end-confirm-icon { width: 52px; height: 52px; border-radius: 50%; background: #fff0f0; color: #d94f4f; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
 .end-confirm-sheet h3 { font-size: 17px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
 .end-confirm-sheet p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0 0 20px; }
+.end-minutes-option { display: flex; align-items: flex-start; gap: 10px; padding: 12px; margin: -6px 0 18px; border: 1px solid #d8eadf; border-radius: 12px; background: #f4faf6; text-align: left; cursor: pointer; }
+.end-minutes-option input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--primary); flex: 0 0 auto; }
+.end-minutes-option span { display: flex; flex-direction: column; gap: 2px; }
+.end-minutes-option b { font-size: 13px; color: #264c37; }
+.end-minutes-option small { font-size: 11px; color: #81988a; line-height: 1.45; }
 .end-confirm-actions { display: flex; gap: 10px; }
 .end-confirm-cancel { flex: 1; height: 44px; border-radius: 12px; border: 1.5px solid #e2e8e4; background: #fff; color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; }
 .end-confirm-ok { flex: 1; height: 44px; border-radius: 12px; border: none; background: #d94f4f; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
 .end-confirm-ok:disabled, .end-confirm-cancel:disabled { opacity: .6; }
+.end-confirm-sheet.is-processing { min-height: 252px; display: grid; place-items: center; padding: 34px 26px 30px; }
+.ai-minutes-progress { display: grid; justify-items: center; width: 100%; }
+.ai-minutes-spinner { position: relative; width: 68px; height: 68px; display: grid; place-items: center; margin-bottom: 18px; color: var(--green); }
+.ai-minutes-spinner::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #eff8f2; box-shadow: 0 0 0 9px rgba(31, 122, 77, .06); }
+.ai-minutes-spinner svg { position: relative; animation: ai-minutes-spin 1.1s linear infinite; }
+.ai-minutes-spinner span { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #60b883; box-shadow: 0 0 0 5px rgba(96, 184, 131, .14); animation: ai-minutes-pulse 1.15s ease-in-out infinite; }
+.ai-minutes-progress h3 { margin-bottom: 7px; color: #214a34; }
+.ai-minutes-progress p { max-width: 240px; margin-bottom: 14px; color: #74877b; font-size: 12px; }
+.ai-minutes-dots { display: flex; gap: 5px; min-height: 7px; }
+.ai-minutes-dots i { width: 6px; height: 6px; border-radius: 50%; background: #8dc7a4; animation: ai-minutes-dot 1.1s ease-in-out infinite; }
+.ai-minutes-dots i:nth-child(2) { animation-delay: .15s; }
+.ai-minutes-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes ai-minutes-spin { to { transform: rotate(360deg); } }
+@keyframes ai-minutes-pulse { 50% { transform: scale(.72); opacity: .55; } }
+@keyframes ai-minutes-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
 .end-current > p { color: var(--green); display: flex; gap: 10px; align-items: center; }
 .end-current > div:last-child { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
 .end-current button { height: 42px; border-radius: 999px; border: 1px solid #ddd; background: #fff; font-size: 10px; }
@@ -984,6 +1338,23 @@ div.create-guide-photo { background: url('/ui-source/create-room.webp') -31px -5
 .sh-font-seg button + button { border-left: 1px solid #dde5e0; }
 .sh-font-seg button.active { background: var(--green); color: #fff; font-weight: 600; }
 
+.sh-minutes-card {
+  flex: 0 0 auto;
+  margin: 6px 16px 2px;
+  padding: 14px;
+  border: 1px solid #d9e8de;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff 0%, #eef7f1 100%);
+  box-shadow: 0 6px 18px rgba(31, 88, 54, .06);
+}
+.sh-minutes-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sh-minutes-head > span { display: inline-flex; align-items: center; gap: 5px; color: var(--green); font-size: 12px; font-weight: 700; }
+.sh-minutes-head small { color: #8ba095; font-size: 10px; }
+.sh-minutes-card h2 { margin: 8px 0 5px; color: #173a29; font-size: 16px; line-height: 1.35; }
+.sh-minutes-card p { margin: 0; color: #5f7669; font-size: 12px; line-height: 1.6; }
+.sh-minutes-keywords { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.sh-minutes-keywords span { padding: 3px 8px; border-radius: 999px; background: #e0efe5; color: #32704d; font-size: 10px; }
+
 /* 列表容器 */
 .sh-list {
   flex: 1; overflow-y: auto; padding: 10px 14px 0;
@@ -1038,6 +1409,29 @@ div.create-guide-photo { background: url('/ui-source/create-room.webp') -31px -5
   color: #a0b0a8; font-size: 14px;
 }
 .sh-empty p { margin: 0; }
+.sh-empty .spinner { width: 24px; height: 24px; margin: 0 auto 10px; }
+.sh-history-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 20px;
+  color: #869b8f;
+  text-align: center;
+}
+.sh-history-error p { margin: 0; font-size: 13px; line-height: 1.55; }
+.sh-history-error button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 12px;
+}
 
 /* 底部安全区 */
 .sh-bottom-space { height: 24px; flex-shrink: 0; }
@@ -1193,6 +1587,19 @@ div.create-guide-photo { background: url('/ui-source/create-room.webp') -31px -5
 .upload-item-success aside i::after { content: "✓"; color: var(--green); }
 .upload-item-waiting aside i::after { content: "⌚"; color: #555; }
 .upload-item aside button { display: block; border: 1px solid #df2929; border-radius: 999px; background: #fff; color: #df2929; font-size: 10px; padding: 4px 10px; margin: 7px auto 0; }
+.upload-quality-card { margin: 0 0 16px; padding: 14px; border: 1px solid #e0eae4; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px rgba(41,65,49,.05); }
+.upload-quality-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.upload-quality-heading strong { color: #1a2e22; font-size: 14px; }
+.upload-quality-heading span { color: #8fa89a; font-size: 11px; }
+.upload-quality-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.upload-quality-options button { min-height: 74px; border: 1.5px solid #e0eae4; border-radius: 12px; padding: 9px 7px; background: #f8faf8; color: #4a6356; cursor: pointer; text-align: left; }
+.upload-quality-options button strong,
+.upload-quality-options button small { display: block; }
+.upload-quality-options button strong { margin-bottom: 4px; font-size: 13px; }
+.upload-quality-options button small { color: #8fa89a; font-size: 9px; line-height: 1.35; }
+.upload-quality-options button.active { border-color: var(--primary); background: rgba(41,120,74,.08); color: var(--primary); }
+.upload-quality-options button:focus-visible { outline: 3px solid rgba(41,120,74,.2); }
+.upload-quality-options button:disabled { cursor: not-allowed; opacity: .65; }
 .upload-screen > .primary-button { height: 40px; min-height: 40px; border-radius: 7px; margin-top: 18px; font-size: 16px; box-shadow: none; }
 .manage-history { width: 100%; height: 40px; margin-top: 8px; border: 1px solid var(--green); border-radius: 7px; background: #fff; color: var(--green); font-size: 15px; font-weight: 700; }
 
@@ -1263,8 +1670,22 @@ svg { flex: 0 0 auto; stroke-width: 1.9; }
 .listening-screen { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .listening-screen .mini-header { flex-shrink: 0; }
 .listening-top { flex-shrink: 0; padding: 0 18px; display: flex; flex-direction: column; gap: 8px; }
-.listening-top .language-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
-.listening-top .language-tools > button { flex-shrink: 0; padding: 6px 10px; font-size: 13px; height: 36px; }
+.listening-top .language-tools { display: flex; align-items: center; justify-content: flex-end; gap: 7px; margin-bottom: 2px; flex-wrap: nowrap; }
+.listening-top .language-tools > button { flex: 0 0 auto; padding: 6px 10px; font-size: 13px; height: 36px; white-space: nowrap; }
+.listening-top .language-tools .language-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 98px;
+}
+.listening-top .language-tools .language-settings-btn svg { width: 17px; height: 17px; }
+.listening-screen .mini-header strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .subtitle-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 18px 12px; display: flex; flex-direction: column; gap: 10px; }
 .listening-bottom { flex-shrink: 0; margin-top: auto; padding: 0 18px 0; display: flex; flex-direction: column; }
 .listening-bottom .ask-fab { position: static; width: 100%; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 7px; margin: 8px 0 0; font-size: 15px; }
@@ -1375,6 +1796,10 @@ svg { flex: 0 0 auto; stroke-width: 1.9; }
 .dialect-menu button { display: block; width: 100%; padding: 9px 14px; text-align: left; font-size: var(--type-meta); border: none; background: none; cursor: pointer; transition: background .12s; }
 .dialect-menu button:hover,.dialect-menu button.active { background: #eef6f1; }
 .processing-hint { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9ab3a0; margin-left: auto; }
+.streaming-mode-chip { padding: 3px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.streaming-mode-chip.streaming { color: #207446; background: #e2f4e9; }
+.streaming-mode-chip.connecting { color: #8a641d; background: #fff2cf; }
+.streaming-mode-chip.chunked { color: #6f7b73; background: #edf1ee; }
 .spin-icon { animation: spin .8s linear infinite; }
 .mic-center { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 16px 0 0; }
 .mic-fab { width: 72px; height: 72px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--green); color: #fff; box-shadow: 0 9px 24px rgba(31,122,77,.28); transition: transform .12s; }
@@ -1383,6 +1808,10 @@ svg { flex: 0 0 auto; stroke-width: 1.9; }
 @keyframes mic-pulse { 0%,100%{box-shadow:0 4px 16px rgba(229,57,53,.35)} 50%{box-shadow:0 4px 28px rgba(229,57,53,.6)} }
 .mic-action-title { margin-top: 4px; font-size: 15px; color: #224c34; }
 .mic-hint { max-width: 290px; margin: 0; font-size: 12px; line-height: 1.5; color: #718178; text-align: center; }
+.audio-transport-notice { max-width: 310px; margin: 2px 0 0; padding: 6px 9px; border-radius: 9px; font-size: 11px; line-height: 1.45; text-align: center; }
+.audio-transport-notice.baidu { color: #207446; background: #e2f4e9; }
+.audio-transport-notice.direct { color: #8a641d; background: #fff2cf; }
+.audio-transport-notice.failed { color: #b44135; background: #fff0ed; }
 .mic-fab:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 /* denied 状态下按钮可点击，视觉上略降透明度以配合提示条 */
 .mic-perm-banner.denied ~ .mic-fab { opacity: .7; }
@@ -1422,6 +1851,8 @@ svg { flex: 0 0 auto; stroke-width: 1.9; }
 .my-avatar-edit { position: absolute; bottom: 2px; right: 2px; width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .my-name { font-size: 20px; font-weight: 700; color: #1a2e22; margin: 0; }
 .my-role-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 12px; border-radius: 20px; background: rgba(41,120,74,.1); color: var(--primary); font-size: 13px; font-weight: 600; }
+.my-role-tag > span,
+.my-role-badge { display: inline-flex; align-items: center; gap: 4px; }
 .my-phone { font-size: 13px; color: #8fa89a; margin: 0; }
 
 /* 卡片 */
@@ -1473,6 +1904,7 @@ svg { flex: 0 0 auto; stroke-width: 1.9; }
 .my-menu-item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 0; border: none; background: none; cursor: pointer; border-bottom: 1px solid #f0f5f2; text-align: left; }
 .my-menu-item:last-child { border-bottom: none; }
 .my-menu-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.my-menu-icon svg { width: 18px; height: 18px; stroke-width: 1.8; }
 .my-menu-icon.green { background: rgba(41,120,74,.1); color: var(--primary); }
 .my-menu-icon.blue { background: rgba(59,130,246,.1); color: #3b82f6; }
 .my-menu-icon.amber { background: rgba(245,158,11,.1); color: #f59e0b; }
@@ -1569,6 +2001,85 @@ svg { flex: 0 0 auto; stroke-width: 1.9; }
 .rec-room-action.live  { background: rgba(41,120,74,.13); color: var(--primary); }.rec-room-action.ended { background: #f0f5f2; color: #4a6356; }
 .rec-room-action.pending-start { background: rgba(245,158,11,.12); color: #b45309; }
 
+/* 讲解记录详情：会议纪要与完整字幕 */
+.rec-detail-page { background: #f4f8f5; }
+.minutes-regenerate, .minutes-empty button { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; border: 0; border-radius: 10px; padding: 9px 13px; background: var(--primary); color: #fff; font-weight: 650; }
+.minutes-regenerate:disabled, .minutes-empty button:disabled { opacity: .5; }
+.minutes-empty p { margin: 14px 0 0; color: #6c8376; font-size: 13px; line-height: 1.65; }
+.minutes-document { margin: 4px 0 22px; padding: 18px 16px; border-radius: 18px; background: #fff; border: 1px solid #dde8e0; box-shadow: 0 5px 18px rgba(34,61,43,.07); }
+.minutes-document__head { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 15px; border-bottom: 2px solid #244d35; color: var(--primary); }
+.minutes-document__head small { display: block; color: #7a9183; font-size: 11px; font-weight: 600; letter-spacing: .08em; }
+.minutes-document__head h2 { margin: 5px 0 0; color: #182a20; font-size: 20px; line-height: 1.35; }
+.minutes-fixed-step { margin-top: 17px; }
+.minutes-fixed-step__header { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 8px 12px; border-left: 5px solid #293b30; background: #f1f3f1; }
+.minutes-fixed-step__header > span { color: var(--primary); font-size: 14px; font-weight: 900; letter-spacing: .03em; }
+.minutes-fixed-step__header h3 { margin: 0; color: #1c2e23; font-size: 15px; font-weight: 800; }
+.minutes-fixed-step__body { padding: 12px 3px 0; }
+.minutes-keywords--primary { gap: 8px; }
+.minutes-keywords--primary span { padding: 6px 10px; background: #e8f3eb; color: #215e3b; font-size: 11px; }
+.minutes-fixed-summary { margin: 0; color: #34493c; font-size: 13px; line-height: 1.8; }
+.minutes-fixed-points { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.minutes-fixed-points li { display: grid; grid-template-columns: 28px 1fr; gap: 9px; padding: 10px 0; border-bottom: 1px solid #e6ebe7; }
+.minutes-fixed-points li:last-child { border-bottom: 0; }
+.minutes-fixed-points span { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 6px; background: #e7f2ea; color: var(--primary); font-size: 10px; font-weight: 800; }
+.minutes-fixed-points p { margin: 1px 0 0; color: #3d5145; font-size: 12px; line-height: 1.65; }
+.minutes-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 14px 0; }
+.minutes-info-grid > div { min-width: 0; padding: 10px 8px; border-radius: 10px; background: #f4f7f5; color: #4c6958; }
+.minutes-info-grid svg { display: block; margin-bottom: 5px; color: var(--primary); }
+.minutes-info-grid span, .minutes-info-grid b { display: block; }
+.minutes-info-grid span { color: #8a9b91; font-size: 9px; }
+.minutes-info-grid b { margin-top: 3px; color: #2f4738; font-size: 11px; line-height: 1.35; word-break: break-word; }
+.minutes-keywords { display: flex; flex-wrap: wrap; gap: 6px; }
+.minutes-keywords span { padding: 4px 8px; border-radius: 999px; background: #eaf4ed; color: #286342; font-size: 10px; font-weight: 650; }
+.minutes-template-upgrade { margin-top: 14px; padding: 12px; border-radius: 10px; background: #fff8e8; color: #85632c; font-size: 12px; line-height: 1.6; }
+.minutes-template-upgrade p { margin: 0; }
+.minutes-document__footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; padding-top: 13px; border-top: 1px solid #e2e8e4; }
+.minutes-document__footer > span { color: #92a097; font-size: 9px; line-height: 1.4; }
+.minutes-document__footer .minutes-regenerate { flex: 0 0 auto; margin-top: 0; }
+.record-transcript-head { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 12px; color: #254633; }
+.record-transcript-head div { display: flex; align-items: center; gap: 7px; }
+.record-transcript-head span { color: #82978b; font-size: 12px; }
+.record-transcript-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 24px; }
+.record-transcript-item { position: relative; padding: 13px 14px 13px 70px; border-radius: 14px; background: #fff; border: 1px solid #e1ebe4; }
+.record-transcript-item time { position: absolute; left: 13px; top: 15px; color: #8ca095; font-size: 10px; }
+.record-transcript-item p { margin: 0; color: #23422f; font-size: 14px; font-weight: 650; line-height: 1.55; }
+.record-transcript-item small { display: block; margin-top: 4px; color: #4f8062; font-size: 12px; line-height: 1.5; }
+
+/* 消息通知 */
+.support-page { background: #f4f8f5; }
+.support-read-all { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; color: var(--primary); font-size: 12px; }
+.support-read-all:disabled { color: #a9b8af; }
+.support-notice-list { display: flex; flex-direction: column; gap: 10px; }
+.support-notice { position: relative; width: 100%; display: flex; align-items: center; gap: 11px; padding: 14px; border: 1px solid #e0ebe4; border-radius: 16px; background: #fff; text-align: left; color: #789083; }
+.support-notice.unread { border-color: #bedfc8; background: #fbfefc; }
+.support-notice-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #e9f5ed; color: var(--primary); flex: 0 0 auto; }
+.support-notice-body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.support-notice-body b { color: #274634; font-size: 14px; }
+.support-notice-body small { color: #6f8879; font-size: 12px; }
+.support-notice-body time { color: #9aac9f; font-size: 10px; }
+.support-notice > i { position: absolute; top: 12px; right: 12px; width: 7px; height: 7px; border-radius: 50%; background: #ef5350; }
+
+/* 长内容页必须由页面自身滚动，避免全局移动端容器裁切卡片和字幕。 */
+.mobile-app > .screen.success-screen,
+.mobile-app > .screen.rec-detail-page,
+.mobile-app > .screen.guide-subtitle-record-screen,
+.mobile-app > .screen.guest-list-screen {
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(34px + env(safe-area-inset-bottom));
+}
+.mobile-app > .screen.success-screen .mini-header,
+.mobile-app > .screen.rec-detail-page .mini-header,
+.mobile-app > .screen.guide-subtitle-record-screen .mini-header,
+.mobile-app > .screen.guest-list-screen .mini-header { top: 0; }
+.mobile-app > .screen.success-screen .success-mark-wrap { height: 82px; margin-top: 0; }
+.mobile-app > .screen.success-screen .success-room-cover-wrap { height: 132px; }
+.mobile-app > .screen.success-screen .success-room-info { padding: 11px 16px; }
+.mobile-app > .screen.success-screen .success-secret { padding: 6px 18px 10px; }
+.mobile-app > .screen.success-screen .success-secret > p { padding: 10px 0; }
+.mobile-app > .screen.success-screen .real-qr { flex-direction: column; align-items: center; padding-top: 10px; }
+
 /* ══════════════════════════════════════════
    全局通用：空状态 / 加载 / 骨架
    ══════════════════════════════════════════ */
@@ -1647,6 +2158,61 @@ body { display: flex; justify-content: center; background: #e8efea; }
 .toggle-btn { width: 50px; height: 30px; border: 0; border-radius: 16px; background: #dce2dd; color: #69716b; font-size: 12px; cursor: pointer; }
 .toggle-btn.on { background: var(--green); color: #fff; }
 .display-mode-row { min-height: 62px; }
+
+/* Tourist subtitle preferences: listening language, explanation, and type size. */
+.subtitle-settings-screen { padding-left: 20px; padding-right: 20px; }
+.subtitle-settings-screen .mini-header { margin-bottom: 18px; }
+.subtitle-preference-card {
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid #dbe7df;
+  border-radius: 24px;
+  background: rgba(255,255,255,.94);
+  box-shadow: 0 10px 28px rgba(36,64,47,.06);
+}
+.subtitle-preference-section { padding: 20px; }
+.subtitle-preference-section + .subtitle-preference-section { border-top: 1px solid #e5ece7; }
+.subtitle-preference-section h2 {
+  margin: 0 0 14px;
+  color: #203a2a;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.subtitle-mode-options,
+.subtitle-size-options {
+  display: grid;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid #dbe5de;
+  border-radius: 15px;
+  background: #f4f6f3;
+}
+.subtitle-mode-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.subtitle-size-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.subtitle-mode-options button,
+.subtitle-size-options button {
+  min-width: 0;
+  min-height: 46px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #617269;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+.subtitle-mode-options button.active,
+.subtitle-size-options button.active {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(31,122,77,.18);
+}
+.mode-summary-section { background: linear-gradient(135deg, #f2f8f4 0%, #f8faf7 100%); }
+.mode-summary-section h2 { margin-bottom: 7px; color: #6f8177; font-size: 13px; }
+.mode-summary-section p { margin: 0; color: #276b46; font-size: 14px; font-weight: 650; line-height: 1.55; }
+.subtitle-settings-save { min-height: 52px; border-radius: 17px; font-size: 16px; }
 
 /* Pushed heritage cards are strong, image-led alerts. */
 .knowledge-card-image { width: 100%; height: 180px; display: block; object-fit: cover; border-radius: 18px; margin: 12px 0 15px; background: #e8eee9; }
@@ -1782,6 +2348,15 @@ body { display: flex; justify-content: center; background: #e8efea; }
 .kc-edit-scroll { overflow-y: auto; padding-bottom: 32px; flex: 1; min-height: 0; -webkit-overflow-scrolling: touch; }
 .kc-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .kc-field label { font-size: 13px; font-weight: 600; color: #6a7e72; }
+.kc-image-field { position: relative; }
+.kc-image-upload { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border: 1.5px dashed #a9cdb7; border-radius: 16px; background: linear-gradient(145deg, #f2f9f4, #fbfcfa); color: var(--primary); cursor: pointer; padding: 0; }
+.kc-image-upload:disabled { cursor: wait; opacity: .72; }
+.kc-image-upload img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.kc-image-upload-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.kc-image-upload-empty strong { font-size: 14px; }
+.kc-image-upload-empty small { color: #8ca095; font-size: 11px; font-weight: 500; }
+.kc-image-upload-mask { position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,.92); box-shadow: 0 4px 14px rgba(18,64,39,.14); color: var(--primary); font-size: 12px; font-weight: 700; }
+.kc-image-remove { align-self: flex-end; border: 0; background: transparent; color: #a16868; font-size: 12px; padding: 2px 0; cursor: pointer; }
 /* ── 卡片库头部新建按钮 ── */
 .card-lib-add-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .card-lib-add-btn:active { opacity: .8; }
@@ -1863,7 +2438,7 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 /* ══════════════════════════════════════════
    R02 字幕 Tab
    ══════════════════════════════════════════ */
-.subtitle-tab-screen { display: flex; flex-direction: column; height: 100%; }
+.subtitle-tab-screen { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .subtitle-tab-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; flex-shrink: 0; border-bottom: 1px solid #eaf2ec; }
 .subtitle-tab-title { font-size: 16px; font-weight: 700; color: #1a2e22; flex: 1; }
 .lang-seg-ctrl { display: flex; border: 1.5px solid #e0eae4; border-radius: 10px; overflow: hidden; }
@@ -1873,7 +2448,14 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 .subtitle-font-ctrl button { width: 26px; height: 26px; border-radius: 6px; border: 1.5px solid #e0eae4; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #6a7e72; }
 .subtitle-font-ctrl button.active { border-color: var(--primary); color: var(--primary); }
 
-.subtitle-tab-body { flex: 1; overflow-y: auto; padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
+.subtitle-tab-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
+.subtitle-tab-empty {
+  flex: 1;
+  min-height: 250px;
+  justify-content: center;
+  padding: 24px;
+  transform: translateY(-5%);
+}
 .subtitle-block { background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(41,65,49,.06); }
 .st-cn { margin: 0 0 4px; font-weight: 500; color: #1a2e22; line-height: 1.6; }
 .st-en { margin: 0; color: #8fa89a; line-height: 1.6; font-style: italic; }
@@ -1937,6 +2519,21 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
   position: sticky; bottom: 48px; /* 字幕 tab 底栏高度 */
   z-index: 10; margin: 0 auto; width: fit-content;
 }
+.auto-scroll-btn {
+  flex: 0 0 auto;
+  min-height: 40px;
+  border: 0;
+  border-top: 1px solid #e8eee9;
+  background: rgba(255, 255, 255, .9);
+  color: #60756a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.auto-scroll-btn svg { width: 14px; height: 14px; }
 
 /* ══════════════════════════════════════════
    R08 弱网重连
@@ -1966,12 +2563,20 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 /* ══════════════════════════════════════════
    相册 Tab（游客房间内）
    ══════════════════════════════════════════ */
-.room-album-screen { }
+.room-album-screen { display: flex; flex-direction: column; overflow: hidden; }
 .room-album-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .room-album-name { font-size: 15px; font-weight: 700; color: #1a2e22; }
 .room-album-count { font-size: 13px; color: #8fa89a; }
 
-.room-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 80px; }
+.room-photo-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 0; padding-bottom: 16px; }
+.room-album-empty {
+  flex: 1;
+  min-height: 250px;
+  justify-content: center;
+  padding: 24px;
+  transform: translateY(-5%);
+}
+.room-album-screen .bottom-nav { margin-inline: -24px; }
 .room-photo-cell { position: relative; aspect-ratio: 1; border: none; padding: 0; cursor: pointer; background: #eaf2ec; overflow: hidden; border-radius: 4px; }
 .room-photo-img { width: 100%; height: 100%; object-fit: cover; }
 .room-photo-time { position: absolute; bottom: 3px; left: 3px; font-size: 10px; color: rgba(255,255,255,.85); background: rgba(0,0,0,.3); padding: 1px 5px; border-radius: 5px; }
@@ -2005,9 +2610,41 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 .scan-room strong { font-size: 14px; font-weight: 700; color: #1a2e22; }
 .scan-room small { font-size: 12px; color: #8fa89a; }
 .scan-room > b { color: #c4d4c9; display: flex; align-items: center; }
+.scan-room:focus-visible,
+.joinable-room-card:focus-visible,
+.member-tab-row button:focus-visible,
+.room-filter-scroll button:focus-visible {
+  outline: 3px solid rgba(41,120,74,.2);
+  outline-offset: 2px;
+}
+
+.joinable-room-section { margin-top: 16px; }
+.joinable-room-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: var(--primary); }
+.joinable-room-heading > div { display: flex; flex-direction: column; gap: 2px; }
+.joinable-room-heading strong { font-size: 15px; color: #1a2e22; }
+.joinable-room-heading span { font-size: 11px; color: #8fa89a; }
+.joinable-room-list { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 1px 2px 5px; scrollbar-width: none; }
+.joinable-room-list::-webkit-scrollbar { display: none; }
+.joinable-room-card { width: min(100%, 318px); min-width: min(88%, 296px); display: grid; grid-template-columns: 48px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 12px; border: 1px solid #dbe9df; border-radius: 15px; background: #fff; box-shadow: 0 2px 8px rgba(41,65,49,.06); text-align: left; cursor: pointer; scroll-snap-align: start; }
+.joinable-room-cover { width: 48px; height: 48px; border-radius: 12px; overflow: hidden; display: grid; place-items: center; color: #79a889; background: #eaf2ec; }
+.joinable-room-cover img { width: 100%; height: 100%; object-fit: cover; }
+.joinable-room-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.joinable-room-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #1a2e22; }
+.joinable-room-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #8fa89a; }
+.joinable-room-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.joinable-room-meta b,
+.joinable-room-meta small { display: inline-flex; align-items: center; gap: 3px; }
+.joinable-room-meta b { padding: 3px 6px; border-radius: 8px; background: rgba(41,120,74,.1); color: var(--primary); font-size: 10px; white-space: nowrap; }
+.joinable-room-meta small { color: #8fa89a; font-size: 10px; }
+.joinable-room-message,
+.joinable-room-loading { min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px dashed #d6e5da; border-radius: 14px; background: rgba(255,255,255,.56); color: #7a9482; font-size: 12px; text-align: center; }
+.joinable-room-loading .spinner { width: 18px; height: 18px; }
 
 .task-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
-.task-card { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 16px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(41,65,49,.06); }
+.task-card { display: flex; align-items: center; gap: 12px; width: 100%; background: #fff; border: 1px solid transparent; border-radius: 16px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(41,65,49,.06); text-align: left; }
+.task-card-clickable { cursor: pointer; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.task-card-clickable:active { transform: scale(.99); }
+.task-card-clickable:focus-visible { outline: 3px solid rgba(41,120,74,.2); border-color: var(--primary); }
 .task-cover { width: 48px; height: 48px; border-radius: 12px; background: #eaf2ec; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #a0c4aa; }
 .task-cover img { width: 100%; height: 100%; object-fit: cover; }
 .task-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -2023,12 +2660,12 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 .task-status-done     { background: #f0f5f2; color: #8fa89a; }
 .task-status-ready    { background: rgba(59,130,246,.08); color: #2563eb; }
 .task-enter-btn,
-.task-wait-btn { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; flex-shrink: 0; }
+.task-wait-btn { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
 .task-enter-btn { background: var(--primary); color: #fff; }
 .task-wait-btn  { background: #f0f5f2; color: #4a6356; }
 
 /* ══════════════════════════════════════════
-   C03 摄影师加入 / C04 等待审批
+   C03 摄影师加入 / C04 旧等待页兼容
    ══════════════════════════════════════════ */
 .photo-join-note { display: flex; align-items: flex-start; gap: 10px; background: rgba(41,120,74,.06); border-radius: 12px; padding: 12px 14px; margin-bottom: 20px; color: var(--primary); }
 .photo-join-note p { font-size: 14px; color: #4a6356; margin: 0; line-height: 1.5; }
@@ -2058,17 +2695,26 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 .room-filter-scroll::-webkit-scrollbar { display: none; }
 .room-filter-scroll button { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e0eae4; background: #fff; font-size: 13px; font-weight: 600; color: #6a7e72; cursor: pointer; }
 .room-filter-scroll button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.album-load-warning,
+.album-load-note { border-radius: 11px; padding: 9px 12px; margin-bottom: 12px; font-size: 12px; line-height: 1.5; }
+.album-load-warning { background: #fff6e5; color: #9a5c00; border: 1px solid #f6d79a; }
+.album-load-note { background: #eef6f0; color: #557260; border: 1px solid #d8e8dc; }
 
 .photo-album-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding-bottom: 80px; }
 .pa-item { position: relative; aspect-ratio: 1; border-radius: 4px; overflow: hidden; background: #eaf2ec; }
 .pa-img { width: 100%; height: 100%; object-fit: cover; }
-.pa-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.4) 0%, transparent 50%); display: flex; align-items: flex-end; justify-content: space-between; padding: 4px; opacity: 0; transition: opacity .2s; }
-.pa-item:hover .pa-overlay { opacity: 1; }
+.pa-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.4) 0%, transparent 50%); display: flex; align-items: flex-end; justify-content: flex-end; padding: 5px; opacity: 1; transition: opacity .2s; }
+@media (hover: hover) and (pointer: fine) {
+  .pa-overlay { opacity: 0; }
+  .pa-item:hover .pa-overlay,
+  .pa-item:focus-within .pa-overlay { opacity: 1; }
+}
 .pa-delete-tag { font-size: 10px; font-weight: 700; background: rgba(239,68,68,.8); color: #fff; padding: 2px 5px; border-radius: 5px; }
-.pa-delete-btn { background: rgba(0,0,0,.4); border: none; cursor: pointer; color: #fff; padding: 5px; border-radius: 8px; display: flex; }
+.pa-delete-btn { width: 44px; height: 44px; background: rgba(0,0,0,.52); border: none; cursor: pointer; color: #fff; padding: 0; border-radius: 11px; display: grid; place-items: center; }
+.pa-delete-btn:focus-visible { outline: 3px solid rgba(255,255,255,.9); outline-offset: 1px; }
 
 /* ══════════════════════════════════════════
-   C08 删除申请
+   C08 删除照片
    ══════════════════════════════════════════ */
 .delete-photo-preview { width: 100%; aspect-ratio: 4/3; border-radius: 16px; overflow: hidden; margin-bottom: 16px; background: #eaf2ec; }
 .delete-preview-img { width: 100%; height: 100%; object-fit: cover; }
@@ -2303,6 +2949,13 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
   transition: border-color .15s;
 }
 .ps-feedback-contact:focus { border-color: var(--green); }
+.ps-feedback-submit { margin-top: 12px; }
+.mobile-app > .screen.help-feedback-screen {
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(34px + env(safe-area-inset-bottom));
+}
 .ps-category-grid {
   display: flex; flex-wrap: wrap; gap: 8px;
   margin-bottom: 4px;
@@ -2733,11 +3386,23 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 .live-content-stream__sync {
   margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 400;
 }
+.live-content-stream__viewport { position: relative; }
 .live-content-stream__list {
   max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
   padding-right: 2px; scroll-behavior: smooth;
   /* 细滚动条 */
   scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.12) transparent;
+}
+.live-content-stream__latest {
+  position: absolute; left: 50%; bottom: 10px; z-index: 2;
+  transform: translateX(-50%);
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-height: 36px; padding: 7px 14px;
+  border: 1px solid #c4dfc9; border-radius: 999px;
+  background: rgba(230,244,236,.96); color: var(--green);
+  box-shadow: 0 4px 14px rgba(31,122,77,.16);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap;
 }
 .live-content-stream__empty {
   font-size: 13px; color: var(--muted); text-align: center; padding: 14px 0; margin: 0;
@@ -2777,6 +3442,26 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 }
 .lcs-bubble--subtitle .lcs-bubble__main { color: #1a3d26; }
 .lcs-bubble--subtitle .lcs-bubble__sub  { color: #3d7a55; }
+.lcs-bubble--draft {
+  border-style: dashed;
+  box-shadow: none;
+  opacity: .86;
+}
+.lcs-bubble--draft > span {
+  display: inline-block;
+  margin-top: 5px;
+  color: #4f8b64;
+  font-size: 11px;
+  animation: subtitle-draft-pulse 1.2s ease-in-out infinite;
+}
+.subtitle-card--draft { border: 1px dashed #9bc9a9; background: #f0f8f2; opacity: .9; }
+.subtitle-draft-label {
+  display: inline-block;
+  color: #4f8b64;
+  font-size: 11px;
+  animation: subtitle-draft-pulse 1.2s ease-in-out infinite;
+}
+@keyframes subtitle-draft-pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 
 /* 提问气泡：低饱和浅橙 */
 .lcs-bubble--question {
@@ -2785,6 +3470,4392 @@ hr.dashed { border-top: 1px dashed #d0e8d6; }
 }
 .lcs-bubble--question .lcs-bubble__main { color: #3d2208; }
 .lcs-bubble--question .lcs-bubble__sub  { color: #8a5a20; }
+.lcs-bubble--barrage { position: relative; background: #f2f0fb; border: 1px solid #d8d2ee; }
+.lcs-bubble--barrage .lcs-bubble__main { color: #40375f; padding-right: 38px; }
+.lcs-bubble__tag { display: inline-flex; margin-top: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.72); color: #887b66; font-size: 10px; font-weight: 600; }
+.lcs-bubble--barrage .lcs-bubble__tag { position: absolute; right: 10px; top: 7px; margin: 0; color: #726592; }
+.listener-content-heading { display: flex; align-items: center; justify-content: space-between; padding: 5px 2px 1px; color: #5e7165; }
+.listener-content-heading strong { font-size: 13px; }
+.listener-content-heading span { font-size: 11px; color: var(--muted); }
 
 /* live-label 正在连接状态 */
 .live-label.is-starting { color: #b07820; background: #fff3d0; }
+
+/* ── 2026-07-30 审计修复：导游语音控制台合并、错误态与可访问性 ── */
+.guide-voice-console {
+  flex: 0 0 auto;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid #cfe2d4;
+  border-radius: 24px;
+  background: linear-gradient(150deg, #fff 0%, #f1f8f3 100%);
+  box-shadow: 0 12px 34px rgba(31, 122, 77, .1);
+}
+.guide-voice-console.is-live {
+  border-color: #91c5a2;
+  box-shadow: 0 14px 38px rgba(31, 122, 77, .14);
+}
+.guide-voice-console .live-host-card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  min-height: 0;
+  margin: 0;
+  padding: 18px 16px 15px;
+  gap: 13px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.guide-voice-console .live-host-card .avatar {
+  width: 76px;
+  height: 76px;
+}
+.guide-voice-console .live-host-copy {
+  min-width: 0;
+}
+.guide-voice-console .host-name-row {
+  align-items: flex-start;
+  gap: 6px;
+}
+.guide-voice-console .host-name-row h2 {
+  max-width: none;
+  min-width: 0;
+  font-size: 18px;
+}
+.guide-voice-console .host-name-row .live-label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11px;
+}
+.guide-voice-console .host-name-row .live-label svg {
+  width: 11px;
+  height: 11px;
+}
+.guide-voice-console .live-host-card .wave {
+  width: min(132px, 100%);
+  margin-top: 6px;
+}
+.guide-voice-console .live-host-card .timer {
+  font-size: 26px;
+}
+.guide-voice-console .live-host-card p {
+  color: #56675d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.guide-voice-console .voice-panel {
+  min-height: 0;
+  margin: 0 14px;
+  padding: 14px 2px 17px;
+  border: 0;
+  border-top: 1px solid #dce9e0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.guide-voice-console .voice-panel-heading {
+  padding: 0 4px;
+  flex-wrap: wrap;
+}
+.guide-voice-console .mic-center {
+  padding-top: 13px;
+}
+.cr-pwd-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cr-pwd-visibility {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d6e5da;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--green);
+  cursor: pointer;
+}
+
+.rec-error {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #efc7c1;
+  border-radius: 16px;
+  background: #fff3f1;
+  color: #8f3028;
+  text-align: center;
+}
+.rec-error p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.rec-error button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #a63c32;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rec-stat-label,
+.rec-room-meta span,
+.rec-loading,
+.minutes-document__footer > span,
+.live-content-stream__sync,
+.listener-content-heading span {
+  color: #5f7066;
+}
+.minutes-document__footer > span {
+  font-size: 11px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(31, 122, 77, .32);
+  outline-offset: 3px;
+}
+
+.app-error-fallback {
+  width: min(100% - 32px, 420px);
+  margin: 72px auto;
+  padding: 24px;
+  border: 1px solid #efc7c1;
+  border-radius: 20px;
+  background: #fff8f6;
+  color: #4d2723;
+  box-shadow: var(--shadow);
+}
+.app-error-fallback h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+.app-error-fallback p {
+  margin: 0 0 16px;
+  color: #75504b;
+}
+.app-error-fallback pre {
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+  color: #8f3028;
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+.app-error-fallback button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── 游客端视觉整理：统一首页层级、卡片密度与触控反馈，不改变进入房间流程 ── */
+.mobile-app > .screen.tourist-home-screen {
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-inline: 20px;
+  background:
+    radial-gradient(circle at 70% 8%, rgba(212, 233, 219, .48), transparent 26rem),
+    #f7f5ef;
+}
+
+.tourist-welcome-hero {
+  position: relative;
+  min-height: 194px;
+  display: grid;
+  grid-template-columns: minmax(0, 58%) 42%;
+  align-items: center;
+  margin: -4px -8px 10px;
+  padding: 26px 8px 22px 20px;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.tourist-welcome-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -3;
+  inset: 10px 0 8px;
+  border: 1px solid rgba(139, 184, 157, .2);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 22%, rgba(255, 255, 255, .88) 0 12%, transparent 34%),
+    linear-gradient(118deg, #edf7f0 0%, #dbeee1 58%, #c8e3d1 100%);
+  box-shadow: 0 16px 34px rgba(43, 103, 68, .08);
+}
+
+.tourist-welcome-hero::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  right: -2px;
+  bottom: 7px;
+  width: 168px;
+  height: 42px;
+  border-radius: 50% 0 24px 50%;
+  background: linear-gradient(180deg, rgba(221, 239, 226, 0), rgba(183, 218, 194, .72));
+  pointer-events: none;
+}
+
+.tourist-welcome-copy {
+  position: relative;
+  z-index: 4;
+  align-self: center;
+  padding-bottom: 2px;
+}
+
+.tourist-welcome-copy p {
+  margin: 0 0 10px;
+  color: #3f6e57;
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.tourist-welcome-copy h1 {
+  margin: 0;
+  color: #163629;
+  font-size: 34px;
+  font-weight: 790;
+  line-height: 1.12;
+  letter-spacing: -.025em;
+}
+
+.tourist-welcome-copy span {
+  display: block;
+  max-width: 216px;
+  margin-top: 11px;
+  color: #5f7569;
+  font-size: 14px;
+  line-height: 1.58;
+}
+
+.tourist-welcome-person {
+  position: absolute;
+  z-index: 2;
+  right: -11px;
+  bottom: 0;
+  width: 194px;
+  height: 218px;
+  pointer-events: none;
+}
+
+.tourist-welcome-person::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 15px;
+  bottom: 22px;
+  width: 144px;
+  height: 144px;
+  border-radius: 49% 51% 45% 55% / 53% 42% 58% 47%;
+  background: rgba(246, 251, 247, .72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .68);
+}
+
+.tourist-welcome-person img {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: -56px;
+  width: 184px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 14px 18px rgba(31, 72, 49, .16));
+}
+
+.tourist-room-search {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0 16px;
+  border: 1px solid #d9e3dc;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .88);
+  color: #708078;
+  box-shadow: 0 7px 20px rgba(24, 68, 45, .04);
+  backdrop-filter: blur(14px);
+}
+.tourist-room-search:focus-within {
+  border-color: rgba(20, 122, 75, .55);
+  box-shadow: 0 0 0 3px rgba(31, 122, 77, .10);
+}
+.tourist-room-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #163629;
+  font-size: 16px;
+}
+.tourist-room-search input::placeholder { color: #9aada2; }
+
+.tourist-room-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 24px 2px 12px;
+}
+
+.tourist-room-section-heading h2 {
+  margin: 0;
+  color: #163629;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.tourist-room-section-heading span {
+  color: #708078;
+  font-size: 13px;
+}
+
+.tourist-home-screen .room-card-list {
+  display: grid;
+  gap: 12px;
+}
+.tourist-home-screen .room-card {
+  grid-template-columns: 94px minmax(0, 1fr) 22px;
+  gap: 14px;
+  min-height: 126px;
+  margin: 0;
+  padding: 12px;
+  border-color: #d9e3dc;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(26, 62, 44, .055);
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.tourist-home-screen .room-card:not(:disabled):active {
+  transform: scale(.985);
+}
+.tourist-home-screen .room-card.is-entering { opacity: .68; }
+.tourist-home-screen .room-card-cover,
+.tourist-home-screen .room-card .scenic-art.compact {
+  width: 94px;
+  min-width: 94px;
+  height: 102px;
+  border-radius: 14px;
+}
+.tourist-home-screen .room-card-cover {
+  object-position: center;
+  background: #e9efea;
+}
+.tourist-home-screen .room-card-copy {
+  min-width: 0;
+  align-self: stretch;
+  padding: 5px 0;
+}
+.tourist-home-screen .room-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tourist-home-screen .room-card-copy h3 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #163629;
+  font-size: 19px;
+  font-weight: 760;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tourist-home-screen .status-chip {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 720;
+}
+.tourist-home-screen .room-card-meta,
+.tourist-home-screen .room-card-guide {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #708078;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.tourist-home-screen .room-card-meta {
+  flex-wrap: wrap;
+  margin: 0 0 5px;
+}
+.tourist-home-screen .room-card-meta span + span::before {
+  content: "·";
+  margin-right: 6px;
+  color: #b1beb6;
+}
+.tourist-home-screen .room-card-guide {
+  margin: 8px 0 0;
+  color: #4d6257;
+}
+.tourist-home-screen .room-card-guide svg { flex: 0 0 auto; }
+.tourist-home-screen .room-card-guide img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e6f2eb;
+}
+.tourist-home-screen .room-card-enter {
+  width: 22px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: #708078;
+}
+.tourist-home-screen .room-card-enter svg {
+  width: 20px;
+  height: 20px;
+}
+.tourist-home-screen .bottom-nav {
+  margin-inline: -20px;
+}
+.tourist-home-screen .bottom-nav button.active {
+  font-weight: 700;
+}
+.tourist-home-screen .room-empty-state {
+  min-height: 230px;
+  margin-top: 0;
+  place-content: center;
+}
+
+/* ── 游客端「最近」与「我的」：沿用独立预览的标题、卡片与层级 ── */
+.mobile-app > .screen.tourist-recent-screen,
+.mobile-app > .screen.tourist-profile-screen {
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-inline: 20px;
+  background: #f7f5ef;
+}
+
+.tourist-simple-page-header {
+  margin: 10px 0 24px;
+}
+
+.tourist-simple-page-header h1 {
+  margin: 0;
+  color: #163629;
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+}
+
+.tourist-simple-page-header p {
+  margin: 8px 0 0;
+  color: #708078;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.tourist-recent-empty {
+  flex: 1;
+  min-height: 360px;
+  place-content: center;
+  padding-bottom: 60px;
+}
+
+.tourist-empty-orbit {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: #f1f7f3;
+  color: #147a4b;
+}
+
+.tourist-empty-orbit::before,
+.tourist-empty-orbit::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: #d3e7da;
+}
+
+.tourist-empty-orbit::before {
+  top: 5px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+}
+
+.tourist-empty-orbit::after {
+  bottom: 14px;
+  left: 0;
+  width: 6px;
+  height: 6px;
+}
+
+.tourist-recent-empty .empty-title {
+  color: #163629;
+  font-size: 21px;
+}
+
+.tourist-recent-empty .empty-desc {
+  max-width: 280px;
+  margin: 10px auto 22px;
+  color: #708078;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.tourist-recent-screen .bottom-nav,
+.tourist-profile-screen .bottom-nav {
+  margin-inline: -20px;
+}
+
+.tourist-profile-screen.my-page {
+  background: #f7f5ef;
+}
+
+.tourist-profile-screen .my-hero {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin: 0 0 24px;
+  padding: 18px;
+  border: 1px solid #d9e3dc;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.tourist-profile-screen .my-avatar-wrap {
+  width: 72px;
+  height: 72px;
+  margin: 0;
+}
+
+.tourist-profile-screen .my-avatar {
+  width: 72px;
+  height: 72px;
+}
+
+.tourist-profile-screen .my-avatar-edit {
+  right: -2px;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+}
+
+.tourist-profile-screen .my-hero-copy {
+  min-width: 0;
+}
+
+.tourist-profile-screen .my-name {
+  margin: 0 0 7px;
+  overflow: hidden;
+  font-size: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tourist-profile-screen .my-role-tag {
+  padding: 0;
+  background: transparent;
+  color: #147a4b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tourist-settings-label {
+  margin: 22px 4px 9px;
+  color: #708078;
+  font-size: 12px;
+  font-weight: 720;
+  letter-spacing: .04em;
+}
+
+.tourist-profile-screen .my-section-card {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #d9e3dc;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(26, 62, 44, .05);
+}
+
+.tourist-profile-screen .my-menu-item {
+  min-height: 64px;
+  padding: 0 16px;
+}
+
+.tourist-profile-screen .my-menu-icon,
+.tourist-profile-screen .my-menu-icon.blue,
+.tourist-profile-screen .my-menu-icon.green,
+.tourist-profile-screen .my-menu-icon.amber,
+.tourist-profile-screen .my-menu-icon.muted {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #f1f7f3;
+  color: #147a4b;
+}
+
+.tourist-profile-screen .my-menu-label {
+  font-size: 15px;
+  font-weight: 690;
+}
+
+.tourist-profile-screen .my-menu-value {
+  color: #708078;
+  font-size: 13px;
+}
+
+.tourist-profile-screen .my-signout-btn {
+  min-height: 50px;
+  margin-top: 18px;
+  border: 1px solid #e5c9c9;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .55);
+}
+
+/* ── 三端底部导航图标：统一线性笔画、尺寸与视觉占位 ── */
+.bottom-nav button > svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bottom-nav button.active > svg { stroke-width: 2.1; }
+.bottom-nav button > span {
+  max-width: 100%;
+  min-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 全局界面语言选择 ── */
+.language-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 330;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: rgba(19, 33, 24, .46);
+  backdrop-filter: blur(3px);
+  animation: language-fade-in .18s ease-out;
+}
+.language-sheet {
+  width: min(100%, 430px);
+  padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  background: #fbfdfb;
+  box-shadow: 0 -18px 48px rgba(22, 55, 34, .18);
+  animation: language-sheet-up .24s cubic-bezier(.22, .8, .24, 1);
+}
+.language-sheet-handle {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: #d5dfd8;
+}
+.language-sheet-header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 18px;
+}
+.language-sheet-heading-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--green-soft);
+  color: var(--green);
+}
+.language-sheet-header h2 {
+  margin: 0;
+  color: #183424;
+  font-size: 19px;
+  line-height: 1.25;
+}
+.language-sheet-header p {
+  margin: 3px 0 0;
+  color: #84968b;
+  font-size: 12px;
+}
+.language-sheet-header > button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: #f0f5f2;
+  color: #627469;
+  cursor: pointer;
+}
+.language-options {
+  display: grid;
+  gap: 10px;
+}
+.language-option {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 13px;
+  border: 1.5px solid #e0e9e3;
+  border-radius: 17px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+.language-option.is-selected {
+  border-color: #8fc4a2;
+  background: #f1f8f3;
+  box-shadow: 0 7px 20px rgba(31, 122, 77, .08);
+}
+.language-option:disabled { cursor: wait; opacity: .72; }
+.language-option-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #eef5f0;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+.language-option-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.language-option-copy b {
+  color: #1a3323;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.language-option-copy small {
+  overflow: hidden;
+  color: #829389;
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.language-option-check {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #d5e0d9;
+  border-radius: 50%;
+  color: #fff;
+}
+.language-option.is-selected .language-option-check {
+  border-color: var(--green);
+  background: var(--green);
+}
+.language-sheet-note {
+  margin: 14px 2px 0;
+  color: #72847a;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+.language-sheet-sync {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 24px;
+  margin: 8px 0 0;
+  color: var(--green);
+  font-size: 12px;
+}
+@keyframes language-fade-in { from { opacity: 0; } }
+@keyframes language-sheet-up { from { transform: translateY(24px); opacity: .72; } }
+
+@media (max-width: 360px) {
+  .tourist-home-screen .room-card {
+    grid-template-columns: 84px minmax(0, 1fr) 24px;
+    gap: 10px;
+  }
+  .tourist-home-screen .room-card-cover,
+  .tourist-home-screen .room-card .scenic-art.compact {
+    width: 84px;
+    min-width: 84px;
+    height: 88px;
+  }
+  .tourist-home-screen .room-card-copy h3 { font-size: 16px; }
+  .language-sheet { padding-inline: 14px; }
+  .language-option-copy small { white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-minutes-spinner svg,
+  .ai-minutes-spinner span,
+  .ai-minutes-dots i {
+    animation-duration: .001ms;
+    animation-iteration-count: 1;
+  }
+  .tourist-home-screen .room-card { transition: none; }
+  .language-sheet-overlay,
+  .language-sheet { animation: none; }
+  .language-option { transition: none; }
+}
+
+@media (max-width: 340px) {
+  .guide-voice-console .live-host-card {
+    grid-template-columns: 62px minmax(0, 1fr);
+    padding-inline: 12px;
+  }
+  .guide-voice-console .live-host-card .avatar {
+    width: 62px;
+    height: 62px;
+  }
+  .guide-voice-console .host-name-row {
+    flex-wrap: wrap;
+  }
+  .guide-voice-console .host-name-row .live-label {
+    margin-left: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   移动端 H5 稳定性基线
+   - 动态视口优先，不以 700px 强制撑高短屏
+   - 页面内容自然滚动，卡片不参与纵向压缩
+   - 底栏、浮动按钮统一避让系统安全区
+   ═══════════════════════════════════════════════════════════════ */
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+.mobile-app {
+  height: 100dvh;
+  min-height: 0;
+  max-height: 100dvh;
+  container-name: mobile-shell;
+  container-type: inline-size;
+}
+
+.mobile-app > .screen {
+  height: 100%;
+  min-height: 0;
+}
+
+.mobile-app > .screen.padded-screen {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 长页的直接内容块保持真实高度，交由 screen 滚动，避免卡片被 flex 压扁后截断。 */
+.mobile-app > .screen.padded-screen > :is(
+  .mini-header,
+  header,
+  section,
+  .guide-hero,
+  .stats-grid,
+  .current-room-card,
+  .title-row,
+  .history-room-list,
+  .my-hero,
+  .my-section-card,
+  .tourist-settings-label,
+  .my-signout-btn,
+  .my-deactivate-area,
+  .photographer-hero,
+  .scan-room,
+  .member-tab-row,
+  .task-list,
+  .photo-album-grid,
+  .room-filter-scroll,
+  .cr-section-card,
+  .cr-privacy-card,
+  .primary-button,
+  .rec-stats-row,
+  .rec-filter-tabs,
+  .rec-room-card
+) {
+  flex-shrink: 0;
+}
+
+.bottom-nav {
+  height: calc(76px + env(safe-area-inset-bottom));
+  min-height: calc(76px + env(safe-area-inset-bottom));
+  padding-top: 5px;
+  padding-bottom: max(7px, env(safe-area-inset-bottom));
+}
+
+.bottom-nav button {
+  align-content: center;
+}
+
+/* 底栏已独立占位，列表只保留正常内容收尾间距。 */
+.task-list,
+.photo-album-grid,
+.recent-room-list,
+.kc-list {
+  padding-bottom: 24px;
+}
+
+/* 空状态在剩余可用区域内居中，不用固定上边距制造长屏死区。 */
+.mobile-app > .screen.has-tabbar > .empty-state {
+  flex: 1 0 auto;
+  min-height: 240px;
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+.rec-empty {
+  min-height: 220px;
+  justify-content: center;
+  padding: 32px 12px;
+}
+
+/* 导游创建入口始终位于底栏和 Home Indicator 上方，并为历史列表预留空间。 */
+.guide-home-screen .history-room-list {
+  margin-bottom: 24px;
+}
+
+.guide-home-screen .create-fab {
+  bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+/* 可读性下限：业务说明、状态、时间与标签不再使用 9–10px 微型字号。 */
+.login-footer small,
+.create-fab span,
+.room-card-copy p,
+.completed-list small,
+.completed-list aside b,
+.upload-room-summary p b,
+.upload-item > div > small,
+.upload-item > div > em,
+.upload-item aside b,
+.upload-item aside button,
+.upload-quality-options button small,
+.joinable-room-meta b,
+.joinable-room-meta small,
+.library-card-cat-badge,
+.library-card-pushed-badge,
+.library-card-lang,
+.kpc-pushed-badge,
+.minutes-info-grid span,
+.minutes-info-grid b,
+.minutes-keywords span,
+.minutes-document__footer > span,
+.record-transcript-item time,
+.support-notice-body time,
+.room-photo-time {
+  font-size: 12px;
+}
+
+.minutes-info-grid b {
+  font-size: 13px;
+}
+
+.upload-quality-options button {
+  text-align: center;
+}
+
+/* 360px 以下按移动端窄屏重新排布，避免靠缩小字体硬塞。 */
+@container mobile-shell (max-width: 360px) {
+  .guide-home-screen .guide-hero {
+    height: 180px;
+  }
+
+  .guide-home-screen .guide-hero > div:first-child {
+    max-width: 68%;
+  }
+
+  .guide-home-screen .guide-hero h1 {
+    font-size: 24px;
+    letter-spacing: 0;
+  }
+
+  .guide-home-screen .guide-hero p {
+    font-size: 15px;
+  }
+
+  .guide-home-screen .guide-hero span {
+    max-width: 130px;
+    line-height: 1.5;
+  }
+
+  .guide-home-screen .guide-portrait-crop {
+    right: 0;
+    bottom: -25px;
+    width: 135px;
+    height: 135px;
+  }
+
+  .tourist-profile-screen .my-menu-item {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .tourist-profile-screen .my-menu-icon,
+  .tourist-profile-screen .my-menu-icon.blue,
+  .tourist-profile-screen .my-menu-icon.green,
+  .tourist-profile-screen .my-menu-icon.amber,
+  .tourist-profile-screen .my-menu-icon.muted {
+    width: 32px;
+    height: 32px;
+  }
+
+  .tourist-profile-screen .my-menu-label {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .tourist-profile-screen .my-menu-value {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .rec-stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .minutes-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .minutes-info-grid > div {
+    display: grid;
+    grid-template-columns: 24px minmax(72px, auto) 1fr;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .minutes-info-grid svg {
+    margin: 0;
+  }
+
+  .minutes-info-grid b {
+    margin: 0;
+    text-align: right;
+  }
+
+  .upload-quality-options {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-quality-options button {
+    min-height: 54px;
+    padding: 9px 12px;
+  }
+
+  .subtitle-tab-header {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+
+  .lang-seg-ctrl button {
+    padding-inline: 8px;
+  }
+}
+
+/* 横屏和软键盘压缩视口时，页面仍由真实可用高度决定。 */
+@media (max-height: 699px) {
+  .mobile-app,
+  .mobile-app > .screen {
+    min-height: 0;
+  }
+
+  .tourist-simple-page-header {
+    margin-bottom: 16px;
+  }
+
+  .mobile-app > .screen.has-tabbar > .empty-state {
+    min-height: 180px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   摄影师端视觉回归修复
+   - 进行中 / 已完成只改变状态语义，不改变卡片骨架
+   - 我的页顶部导航退出内容滚动层，底部操作避让常驻导航
+   ═══════════════════════════════════════════════════════════════ */
+.photographer-my-tasks .task-list .task-card {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 0;
+  padding: 14px;
+  border: 1px solid #d6e6da;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fff 0%, #f1f8f3 100%);
+  box-shadow: 0 10px 26px rgba(31, 75, 47, .08);
+}
+
+.photographer-my-tasks .task-list .task-cover {
+  width: 82px;
+  height: 82px;
+  border-radius: 15px;
+}
+
+.photographer-my-tasks .task-list .task-room-name {
+  font-size: 17px;
+}
+
+.photographer-my-tasks .task-list .task-room-num {
+  margin-top: 5px;
+  color: #667b70;
+  font-size: 13px;
+}
+
+.photographer-my-tasks .task-list .task-enter-btn,
+.photographer-my-tasks .task-list .task-wait-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 44px;
+  margin-left: 0;
+  justify-self: stretch;
+  justify-content: center;
+  padding-inline: 12px;
+  border-radius: 13px;
+  font-size: 14px;
+}
+
+.photographer-my-tasks .task-list-done .task-enter-btn,
+.photographer-my-tasks .task-list-done .task-wait-btn {
+  background: #e7f2ea;
+  color: #246a43;
+}
+
+.mobile-app > .screen.has-tabbar.photographer-my-screen {
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+}
+
+.mobile-app > .screen.photographer-my-screen .mini-header {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  flex-shrink: 0;
+  margin-bottom: 0;
+  background: transparent;
+}
+
+.photographer-my-screen .my-hero {
+  position: relative;
+  isolation: isolate;
+  margin: 0 -20px 18px;
+  padding: 18px 20px 26px;
+  overflow: hidden;
+  border-radius: 0 0 28px 28px;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(255,255,255,.82) 0 42px, transparent 43px),
+    linear-gradient(145deg, #edf7f0 0%, #dcefe2 100%);
+}
+
+.photographer-my-screen .my-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -34px;
+  bottom: -64px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.38);
+}
+
+.photographer-my-screen .my-signout-btn {
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.photographer-my-screen .my-deactivate-area {
+  margin-top: 0;
+  padding-bottom: 2px;
+}
+
+.photographer-my-screen .my-version {
+  margin-bottom: 22px;
+}
+
+@container mobile-shell (max-width: 360px) {
+  .photographer-my-tasks .task-list .task-card {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 11px;
+    padding: 12px;
+  }
+
+  .photographer-my-tasks .task-list .task-cover {
+    width: 70px;
+    height: 70px;
+  }
+
+  .photographer-my-screen .my-hero {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+}
+
+/* 摄影师个人页 V3：更紧凑的移动端信息层级与安全操作收尾。 */
+.mobile-app > .screen.has-tabbar.photographer-my-screen {
+  padding-inline: 18px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  background: #f7f6f1;
+}
+
+.mobile-app > .screen.photographer-my-screen .mini-header {
+  min-height: 56px;
+  margin: 0 -18px;
+  padding: 0 18px;
+  grid-template-columns: 42px 1fr 42px;
+}
+
+.photographer-my-screen .mini-header strong {
+  font-size: 18px;
+  font-weight: 760;
+}
+
+.photographer-my-screen .my-edit-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #dce8df;
+  border-radius: 13px;
+  background: rgba(255,255,255,.88);
+}
+
+.photographer-my-screen .my-hero {
+  margin: 0 -18px 14px;
+  padding: 12px 18px 18px;
+  border-radius: 0 0 24px 24px;
+  background: #e4f1e8;
+}
+
+.photographer-my-screen .my-hero::after { display: none; }
+.photographer-my-screen .my-avatar-wrap,
+.photographer-my-screen .my-avatar {
+  width: 74px;
+  height: 74px;
+}
+
+.photographer-my-screen .my-avatar-wrap { margin-bottom: 2px; }
+.photographer-my-screen .my-avatar-edit {
+  width: 24px;
+  height: 24px;
+  bottom: 0;
+  right: 0;
+}
+
+.photographer-my-screen .my-name {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.photographer-my-screen .my-role-tag {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.photographer-my-screen > .my-section-card:not(.my-menu-card) {
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+}
+
+.photographer-my-screen .my-section-title {
+  margin-bottom: 6px;
+  font-size: 12px;
+  letter-spacing: .03em;
+  text-transform: none;
+}
+
+.photographer-my-screen .my-info-row { padding: 7px 0; }
+.photographer-my-screen .my-info-label { font-size: 13px; }
+.photographer-my-screen .my-info-value { font-size: 14px; }
+
+.photographer-settings-groups {
+  display: grid;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-bottom: 14px;
+}
+
+.photographer-settings-group > h3 {
+  margin: 0 0 6px 4px;
+  color: #6d8477;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.photographer-settings-group .my-section-card {
+  margin: 0;
+  padding: 2px 14px;
+  border-radius: 18px;
+}
+
+.photographer-settings-group .my-menu-item {
+  min-height: 50px;
+  padding: 9px 0;
+  gap: 11px;
+}
+
+.photographer-settings-group .my-menu-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.photographer-settings-group .my-menu-label { font-size: 14px; }
+.photographer-settings-group .my-menu-value {
+  color: #789083;
+  font-size: 13px;
+}
+
+.photographer-settings-group .my-menu-arrow { color: #9aafa2; }
+
+.photographer-my-screen .my-signout-btn {
+  min-height: 46px;
+  margin: 0 0 4px;
+  padding: 11px 14px;
+  border-radius: 15px;
+  background: #fffafa;
+}
+
+.photographer-my-screen .my-deactivate-area {
+  min-height: 40px;
+  padding: 0;
+}
+
+.photographer-my-screen .my-deactivate-btn {
+  min-height: 40px;
+  color: #a75e5e;
+  font-size: 12px;
+}
+
+.photographer-my-screen .my-version {
+  margin: 0 0 14px;
+  color: #a9b5ae;
+  font-size: 11px;
+}
+
+.mobile-app > .screen.photographer-my-screen .bottom-nav {
+  margin: 0 -18px calc(-12px - env(safe-area-inset-bottom));
+}
+
+@container mobile-shell (max-width: 360px) {
+  .mobile-app > .screen.has-tabbar.photographer-my-screen { padding-inline: 16px; }
+  .mobile-app > .screen.photographer-my-screen .mini-header,
+  .photographer-my-screen .my-hero,
+  .mobile-app > .screen.photographer-my-screen .bottom-nav {
+    margin-inline: -16px;
+  }
+}
+
+/* 摄影师端细节校准：Tab 切换保持稳定结构，主页面标题统一基线。 */
+.photographer-my-tasks .task-list-done .task-card-completed {
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  padding: 14px;
+  border-color: #d6e6da;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fff 0%, #f1f8f3 100%);
+  box-shadow: 0 10px 26px rgba(31, 75, 47, .08);
+}
+
+.photographer-my-tasks .task-list-done .task-cover {
+  width: 82px;
+  height: 82px;
+  border-radius: 15px;
+}
+
+.photographer-my-tasks .task-list-done .task-room-name {
+  font-size: 17px;
+}
+
+.photographer-my-tasks .task-list-done .task-room-num {
+  margin-top: 5px;
+  color: #667b70;
+  font-size: 13px;
+}
+
+.photographer-my-tasks .task-list-done .task-enter-btn,
+.photographer-my-tasks .task-list-done .task-wait-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 44px;
+  justify-self: stretch;
+  justify-content: center;
+  padding-inline: 12px;
+  border-radius: 13px;
+  font-size: 14px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero,
+.mobile-app > .screen.photographer-album-screen .photographer-album-heading {
+  padding-top: 30px;
+  padding-left: 22px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero-copy h1,
+.photographer-album-heading h1 {
+  color: #153a28;
+  font-size: 30px;
+  font-weight: 820;
+  line-height: 1.18;
+  letter-spacing: -.02em;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero-copy > span,
+.photographer-album-heading p {
+  margin-top: 8px;
+  color: #5d7568;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.photographer-my-screen .my-deactivate-area {
+  margin-top: -6px;
+  padding-bottom: 6px;
+}
+
+@container mobile-shell (max-width: 360px) {
+  .photographer-my-tasks .task-list-done .task-card-completed {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 11px;
+    padding: 12px;
+  }
+
+  .photographer-my-tasks .task-list-done .task-cover {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+/* 摄影师端视觉层级 V2：我的任务优先，加入与发现降为辅助入口。 */
+.mobile-app > .screen.photographer-tasks-screen,
+.mobile-app > .screen.photographer-album-screen {
+  background: #f7f5ef;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero {
+  position: relative;
+  isolation: isolate;
+  height: 184px;
+  min-height: 184px;
+  margin: 0 -20px 20px;
+  padding: 30px 22px 22px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0 0 32px 32px;
+  background:
+    radial-gradient(circle at 86% 22%, rgba(255,255,255,.9) 0 12%, transparent 34%),
+    linear-gradient(125deg, #edf7f0 0%, #d8ecdf 62%, #bedbc8 100%);
+  color: #153a28;
+  box-shadow: 0 16px 32px rgba(35, 91, 57, .09);
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 12px;
+  bottom: -32px;
+  width: 164px;
+  height: 164px;
+  border-radius: 52% 48% 44% 56%;
+  background: rgba(255,255,255,.5);
+}
+
+.photographer-hero-copy {
+  position: relative;
+  z-index: 2;
+  width: 62%;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero-copy p {
+  max-width: none;
+  margin: 0 0 8px;
+  color: #3f7057;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-hero-copy h1 {
+  max-width: none;
+  margin: 0;
+  color: #153a28;
+  font-size: 30px;
+  font-weight: 820;
+  line-height: 1.18;
+  letter-spacing: -.02em;
+}
+
+.photographer-hero-copy > span {
+  display: block;
+  max-width: 210px;
+  margin-top: 10px;
+  color: #5d7568;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .photographer-cutout {
+  z-index: 1;
+  top: 22px;
+  right: 16px;
+  bottom: auto;
+  width: 132px;
+  height: 108px;
+  background-position: -225px -77px;
+  border: 3px solid rgba(255,255,255,.74);
+  border-radius: 26px 26px 20px 26px;
+  box-shadow: 0 14px 24px rgba(35, 76, 51, .14);
+}
+
+.photographer-my-tasks {
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+}
+
+.photographer-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 2px 12px;
+}
+
+.photographer-section-heading h2 {
+  margin: 0;
+  color: #173b29;
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.photographer-section-heading p {
+  margin: 3px 0 0;
+  color: #697e72;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.photographer-section-heading > span {
+  flex: 0 0 auto;
+  padding-bottom: 2px;
+  color: #667b70;
+  font-size: 12px;
+}
+
+.photographer-my-tasks .member-tab-row {
+  margin: 0 0 12px !important;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid #dce7df;
+  border-radius: 14px;
+  background: rgba(255,255,255,.74);
+}
+
+.photographer-my-tasks .member-tab-row button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #64766c;
+  font-size: 14px;
+}
+
+.photographer-my-tasks .member-tab-row button.active {
+  background: #1f7a4d;
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(31, 122, 77, .18);
+}
+
+.photographer-my-tasks .task-list {
+  margin: 0;
+  padding: 0;
+}
+
+.photographer-my-tasks .task-list-active .task-card-primary {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #d6e6da;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fff 0%, #f1f8f3 100%);
+  box-shadow: 0 10px 26px rgba(31, 75, 47, .08);
+}
+
+.photographer-my-tasks .task-list-active .task-cover {
+  width: 82px;
+  height: 82px;
+  border-radius: 15px;
+}
+
+.photographer-my-tasks .task-list-active .task-room-name {
+  font-size: 17px;
+}
+
+.photographer-my-tasks .task-list-active .task-room-num {
+  margin-top: 5px;
+  color: #667b70;
+  font-size: 13px;
+}
+
+.photographer-my-tasks .task-list-active .task-enter-btn,
+.photographer-my-tasks .task-list-active .task-wait-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: 13px;
+  font-size: 14px;
+}
+
+.photographer-my-tasks .task-list-done {
+  gap: 8px;
+}
+
+.photographer-my-tasks .task-list-done .task-card-completed {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 11px;
+  min-height: 78px;
+  padding: 10px 12px;
+  border: 1px solid #e0e8e2;
+  border-radius: 16px;
+  background: rgba(255,255,255,.78);
+  box-shadow: none;
+}
+
+.photographer-my-tasks .task-list-done .task-cover {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+}
+
+.photographer-my-tasks .task-list-done .task-room-name {
+  font-size: 15px;
+}
+
+.photographer-my-tasks .task-list-done .task-enter-btn,
+.photographer-my-tasks .task-list-done .task-wait-btn {
+  grid-column: 2;
+  justify-self: start;
+  padding-inline: 10px;
+  background: #e9f3ec;
+  color: #246a43;
+}
+
+.mobile-app > .screen.has-tabbar.photographer-tasks-screen .photographer-task-empty {
+  min-height: 196px;
+  margin: 0;
+  padding: 24px 18px;
+  border-radius: 18px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .scan-room {
+  flex: 0 0 auto;
+  min-height: 72px;
+  margin: 0 0 22px;
+  padding: 12px 14px;
+  border: 1px solid #cfe2d4;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #e9f5ed, #f7fbf8);
+  box-shadow: none;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .scan-room > span {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #b9d9c3;
+  background: #fff;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .scan-room strong {
+  font-size: 15px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .scan-room small {
+  margin-top: 3px;
+  color: #667b70;
+  font-size: 12px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .joinable-room-section {
+  flex: 0 0 auto;
+  margin: 0 0 24px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .joinable-room-heading {
+  margin: 0 2px 10px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .joinable-room-heading strong {
+  font-size: 17px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .joinable-room-heading span {
+  color: #697e72;
+  font-size: 12px;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .joinable-room-card {
+  border-color: #dfe8e2;
+  background: rgba(255,255,255,.64);
+  box-shadow: none;
+}
+
+.mobile-app > .screen.photographer-tasks-screen .bottom-nav,
+.mobile-app > .screen.photographer-album-screen .bottom-nav {
+  margin-inline: -20px;
+}
+
+.mobile-app > .screen.photographer-album-screen .photographer-album-heading {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 138px;
+  margin: 0 -20px 18px;
+  padding: 30px 74px 24px 22px;
+  border-radius: 0 0 28px 28px;
+  background: linear-gradient(135deg, #edf7f0, #dceee2);
+}
+
+.photographer-album-heading-icon {
+  position: absolute;
+  right: 22px;
+  top: 34px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(31,122,77,.16);
+  border-radius: 15px;
+  background: rgba(255,255,255,.72);
+  color: #1f7a4d;
+}
+
+.photographer-album-heading-icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.photographer-album-heading h1 {
+  margin: 0;
+  color: #153a28;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+}
+
+.photographer-album-heading p {
+  margin: 8px 0 0;
+  color: #5d7568;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mobile-app > .screen.has-tabbar.photographer-album-screen > .photographer-album-empty {
+  min-height: 216px;
+  margin: 12px 0 24px;
+  padding: 25px 18px;
+  border: 1px solid #dce7df;
+  border-radius: 18px;
+  background: rgba(255,255,255,.7);
+}
+
+.photographer-album-empty .empty-icon {
+  color: #71a384;
+}
+
+.photographer-album-empty .empty-desc {
+  max-width: 252px;
+  color: #667b70;
+}
+
+@container mobile-shell (max-width: 360px) {
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero,
+  .mobile-app > .screen.photographer-album-screen .photographer-album-heading {
+    margin-inline: -16px;
+  }
+
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero {
+    height: 172px;
+    min-height: 172px;
+    padding-inline: 18px;
+  }
+
+  .photographer-hero-copy {
+    width: 64%;
+  }
+
+  .mobile-app > .screen.photographer-tasks-screen .photographer-cutout {
+    right: 8px;
+    width: 116px;
+  }
+
+  .photographer-my-tasks .task-list-active .task-card-primary {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 11px;
+    padding: 12px;
+  }
+
+  .photographer-my-tasks .task-list-active .task-cover {
+    width: 70px;
+    height: 70px;
+  }
+
+  .photographer-my-tasks .task-list-done .task-card-completed {
+    grid-template-columns: 50px minmax(0, 1fr);
+  }
+
+  .photographer-my-tasks .task-list-done .task-cover {
+    width: 50px;
+    height: 50px;
+  }
+
+  .photographer-my-tasks .task-list-done .task-enter-btn,
+  .photographer-my-tasks .task-list-done .task-wait-btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .mobile-app > .screen.photographer-tasks-screen .bottom-nav,
+  .mobile-app > .screen.photographer-album-screen .bottom-nav {
+    margin-inline: -16px;
+  }
+}
+
+/* 摄影师端移动 H5：紧凑工作台、完整卡片与可恢复加载状态。 */
+.photographer-tasks-screen,
+.photographer-album-screen {
+  padding-inline: 20px;
+}
+
+.photographer-tasks-screen .photographer-hero {
+  height: 156px;
+  min-height: 156px;
+  margin: 0 -20px 14px;
+  padding: 30px 22px;
+  border-radius: 0 0 28px 28px;
+}
+
+.photographer-tasks-screen .photographer-hero p {
+  max-width: calc(100% - 92px);
+  margin-bottom: 8px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.photographer-tasks-screen .photographer-hero h1 {
+  max-width: calc(100% - 92px);
+  font-size: 28px;
+  line-height: 1.18;
+}
+
+.photographer-tasks-screen .scan-room {
+  min-height: 64px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.photographer-tasks-screen .joinable-room-section {
+  margin-top: 18px;
+}
+
+.photographer-tasks-screen .joinable-room-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  overflow: visible;
+  padding: 1px 0;
+}
+
+.photographer-tasks-screen .joinable-room-card {
+  width: 100%;
+  min-width: 0;
+  scroll-snap-align: none;
+}
+
+.photographer-tasks-screen .joinable-room-main small {
+  font-size: 12px;
+}
+
+.photographer-tasks-screen .member-tab-row {
+  margin-top: 18px !important;
+}
+
+.photographer-task-loading {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0 24px;
+}
+
+.photographer-task-loading > span {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  height: 74px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid #dce8df;
+  background: rgba(255,255,255,.78);
+  overflow: hidden;
+}
+
+.photographer-task-loading > span > i,
+.photographer-task-loading > span > b {
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #e5eee8 25%, #f3f7f4 45%, #e5eee8 65%);
+  background-size: 220% 100%;
+  animation: photographer-skeleton 1.35s ease-in-out infinite;
+}
+
+.photographer-task-loading > span > i {
+  width: 56px;
+  height: 54px;
+}
+
+.photographer-task-loading > span > b {
+  width: min(76%, 190px);
+  height: 18px;
+}
+
+.photographer-task-error .empty-icon {
+  color: #8aa698;
+}
+
+@keyframes photographer-skeleton {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   摄影师端完整链路视觉层级（移动 H5）
+   统一任务页建立的浅绿氛围、卡片层级、字号与触控规格。
+   ═══════════════════════════════════════════════════════════════════ */
+.mobile-app > .screen.photographer-join-screen,
+.mobile-app > .screen.photographer-flow-screen,
+.mobile-app > .screen.upload-screen,
+.mobile-app > .screen.photographer-my-screen,
+.mobile-app > .screen.ps-page {
+  padding-inline: 20px;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(196, 226, 205, .34), transparent 180px),
+    #f8f7f2;
+}
+
+.photographer-join-screen .mini-header,
+.photographer-flow-screen .mini-header,
+.upload-screen .mini-header,
+.photographer-my-screen .mini-header,
+.ps-page .mini-header {
+  min-height: 72px;
+  margin-bottom: 12px;
+}
+
+.photographer-join-screen .mini-header strong,
+.photographer-flow-screen .mini-header strong,
+.upload-screen .mini-header strong,
+.photographer-my-screen .mini-header strong,
+.ps-page .mini-header strong {
+  color: #173c29;
+  font-size: 21px;
+  font-weight: 760;
+  letter-spacing: -.02em;
+}
+
+.photographer-join-screen .back-button,
+.photographer-flow-screen .back-button,
+.upload-screen .back-button,
+.ps-page .back-button {
+  width: 44px;
+  height: 44px;
+  margin-left: -10px;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+/* 加入房间：先解释，再输入，再行动。 */
+.photographer-join-screen .photo-join-note {
+  min-height: 82px;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 22px;
+  padding: 16px;
+  border: 1px solid #d8e8dc;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(231,244,235,.94), rgba(255,255,255,.86));
+  box-shadow: 0 10px 28px rgba(39, 82, 55, .06);
+}
+
+.photographer-join-screen .photo-join-note > svg {
+  width: 38px;
+  height: 38px;
+  padding: 9px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(39, 82, 55, .08);
+}
+
+.photographer-join-screen .photo-join-note p {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.photographer-join-screen .join-room-field {
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.photographer-join-screen .join-room-field label,
+.photographer-join-screen .password-hint {
+  color: #345846;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.photographer-join-screen .profile-input {
+  min-height: 56px;
+  padding-inline: 16px;
+  border: 1.5px solid #d8e5dc;
+  border-radius: 16px;
+  background: rgba(255,255,255,.9);
+  font-size: 16px;
+  box-shadow: 0 6px 18px rgba(39,82,55,.04);
+}
+
+.photographer-join-screen > .primary-button,
+.photo-wait-screen .primary-button,
+.photo-delete-screen > .primary-button {
+  min-height: 52px;
+  border-radius: 16px;
+  font-size: 16px;
+  box-shadow: 0 10px 22px rgba(31,122,77,.14);
+}
+
+.photographer-join-screen .password-room-info {
+  margin: 4px 0 26px;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fff, #edf6ef);
+}
+
+.photographer-join-screen .password-room-info h3 {
+  color: #173c29;
+  font-size: 20px;
+}
+
+.photographer-join-screen .password-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 20px;
+}
+
+.photographer-join-screen .digit-box {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: 1;
+  border: 1.5px solid #cbdcd1;
+  border-radius: 13px;
+  background: #fff;
+  font-size: 21px;
+}
+
+.photographer-join-screen .text-button,
+.photo-delete-screen .text-button {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+/* 兼容等待页：把唯一下一步集中在一个完整状态面板内。 */
+.photo-wait-screen .wait-room-card {
+  margin: 4px 0 14px;
+  padding: 18px;
+  border: 1px solid #dce8df;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(39,82,55,.05);
+}
+
+.photo-wait-screen .wait-room-card > .wait-room-icon {
+  display: block;
+  margin: 0 auto 10px;
+}
+
+.photo-wait-screen .wait-status-area {
+  gap: 10px;
+  padding: 28px 20px 22px;
+  border: 1px solid #dce8df;
+  border-radius: 22px;
+  background: rgba(255,255,255,.76);
+  box-shadow: 0 10px 28px rgba(39,82,55,.05);
+}
+
+.photo-wait-screen .wait-status-area > svg {
+  width: 54px;
+  height: 54px;
+  padding: 13px;
+  border-radius: 18px;
+  background: #eaf4ed;
+}
+
+.photo-wait-screen .wait-status-area h3 { font-size: 19px; }
+.photo-wait-screen .wait-status-area p { color: #60786a; line-height: 1.65; }
+.photo-wait-screen .wait-status-area .primary-button { width: 100%; }
+
+/* 上传页：任务身份、选择照片、画质、上传行动形成四级顺序。 */
+.upload-screen .upload-zone-wrap {
+  margin-top: 2px;
+}
+
+.upload-task-context {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 15px 16px;
+  border: 1px solid #dce8df;
+  border-radius: 17px;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 8px 22px rgba(39,82,55,.05);
+}
+
+.upload-task-context > span {
+  grid-column: 1 / -1;
+  color: #769083;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.upload-task-context > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #173c29;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-task-context > small {
+  color: #6b8175;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.upload-screen .loading-state,
+.upload-screen .upload-zone-wrap > .empty-state {
+  min-height: 170px;
+  margin-top: 14px;
+  border: 1px dashed #cfe0d4;
+  border-radius: 20px;
+  background: rgba(255,255,255,.58);
+}
+
+.upload-screen .upload-zone {
+  height: 166px;
+  margin: 14px 0 18px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(232,245,236,.95), rgba(255,255,255,.94));
+}
+
+.upload-screen .upload-zone > span {
+  width: 52px;
+  height: 52px;
+  border: 0;
+  box-shadow: 0 8px 20px rgba(31,122,77,.12);
+}
+
+.upload-screen .upload-zone strong { font-size: 17px; }
+.upload-screen .upload-zone small { font-size: 12px; }
+
+.upload-screen .upload-quality-card {
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.upload-screen .upload-quality-heading strong { font-size: 16px; }
+.upload-screen .upload-quality-heading span { font-size: 12px; }
+.upload-screen .upload-quality-options { grid-template-columns: 1fr; gap: 8px; }
+.upload-screen .upload-quality-options button {
+  min-height: 58px;
+  padding: 11px 13px;
+  border-radius: 13px;
+}
+.upload-screen .upload-quality-options button strong { font-size: 14px; }
+.upload-screen .upload-quality-options button small { font-size: 12px; }
+.upload-screen > .primary-button,
+.upload-screen > .manage-history {
+  min-height: 50px;
+  height: 50px;
+  border-radius: 15px;
+}
+
+/* 删除页：危险操作不占据整屏，但保留足够确认上下文。 */
+.photo-delete-screen .delete-photo-preview {
+  max-height: 250px;
+  aspect-ratio: 16 / 10;
+  margin: 4px 0 14px;
+  border: 1px solid #e3e8e4;
+  border-radius: 20px;
+  box-shadow: 0 10px 26px rgba(39,82,55,.08);
+}
+
+.photo-delete-screen .delete-note {
+  margin-bottom: 16px;
+  padding: 14px 15px;
+  border: 1px solid #f2dfb8;
+  border-radius: 15px;
+  background: #fff9ed;
+}
+
+.photo-delete-screen .delete-note p {
+  color: #765b2d;
+  font-size: 14px;
+}
+
+.photo-delete-screen > .primary-button {
+  background: #d94a45 !important;
+  box-shadow: 0 10px 22px rgba(217,74,69,.15);
+}
+
+/* 我的：首屏识别身份，次屏管理设置；保持所有原入口不变。 */
+.photographer-my-screen {
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+}
+
+.photographer-my-screen .mini-header {
+  margin-inline: -20px;
+  padding-inline: 20px;
+  background: rgba(232,244,236,.54);
+}
+
+.photographer-my-screen .my-edit-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.72);
+}
+
+.photographer-my-screen .my-hero {
+  gap: 7px;
+  padding: 16px 16px 22px;
+}
+
+.photographer-my-screen .my-name { color: #173c29; font-size: 24px; }
+.photographer-my-screen .my-section-card {
+  padding: 17px;
+  border: 1px solid #e2eae4;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(39,82,55,.05);
+}
+.photographer-my-screen .my-info-label,
+.photographer-my-screen .my-menu-value { font-size: 14px; }
+.photographer-my-screen .my-info-value,
+.photographer-my-screen .my-menu-label { font-size: 15px; }
+
+/* 设置子页：避免 390/320 宽度下出现“桌面缩小版”的微型字体。 */
+.ps-page {
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+}
+
+.ps-page .ps-section { margin-bottom: 20px; }
+.ps-page .ps-section-title {
+  margin: 0 0 9px 2px;
+  color: #607c6c;
+  font-size: 13px;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+
+.ps-page .ps-card {
+  padding: 17px;
+  border: 1px solid #e1e9e3;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(39,82,55,.05);
+}
+
+.ps-page .ps-card-faq { padding: 4px 0; }
+.ps-page .ps-row { min-height: 48px; }
+.ps-page .ps-row-label,
+.ps-page .ps-quality-label,
+.ps-page .ps-perm-name { font-size: 15px; font-weight: 650; }
+.ps-page .ps-tip,
+.ps-page .ps-sub,
+.ps-page .ps-quality-desc,
+.ps-page .ps-perm-desc { color: #71887b; font-size: 13px; line-height: 1.55; }
+.ps-page .ps-quality-item { min-height: 66px; padding: 12px 4px; }
+.ps-page .ps-menu-row { min-height: 56px; }
+.ps-page .ps-faq-q { min-height: 54px; font-size: 15px; }
+.ps-page .ps-faq-a { font-size: 14px; }
+.ps-page .ps-category-btn { min-height: 42px; font-size: 13px; }
+.ps-page .ps-feedback-label { font-size: 14px; }
+.ps-page .ps-feedback-input,
+.ps-page .ps-feedback-contact { font-size: 15px; }
+.ps-page .ps-feedback-input { min-height: 146px; }
+.ps-page .ps-submit-btn { min-height: 50px; border-radius: 15px; font-size: 16px; }
+
+@container mobile-shell (max-width: 360px) {
+  .mobile-app > .screen.photographer-join-screen,
+  .mobile-app > .screen.photographer-flow-screen,
+  .mobile-app > .screen.upload-screen,
+  .mobile-app > .screen.photographer-my-screen,
+  .mobile-app > .screen.ps-page {
+    padding-inline: 16px;
+  }
+
+  .photographer-join-screen .password-boxes { gap: 6px; }
+  .photographer-join-screen .digit-box { border-radius: 11px; }
+  .upload-task-context { grid-template-columns: 1fr; }
+  .upload-task-context > small { grid-column: 1; }
+  .ps-page .ps-card { padding: 15px; }
+  .ps-page .ps-perm-item { flex-wrap: wrap; }
+  .ps-page .ps-perm-right { width: 100%; align-items: flex-start; padding-left: 42px; }
+}
+
+.mobile-app > .screen.has-tabbar.photographer-tasks-screen > .photographer-task-empty {
+  flex: 0 0 auto;
+  min-height: 214px;
+  margin: 12px 0 24px;
+  padding: 28px 18px;
+  border: 1px dashed #d6e5da;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .58);
+}
+
+.photographer-tasks-screen .task-list {
+  margin-top: 12px;
+}
+
+.photographer-album-screen .photographer-album-heading {
+  padding-top: 8px;
+  margin-bottom: 20px;
+}
+
+.photographer-album-screen .photographer-album-heading h2 {
+  margin-top: 12px;
+}
+
+.album-loading-state {
+  flex: 1 0 auto;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 24px 0 32px;
+}
+
+.album-loading-state p {
+  margin: 0;
+  color: #789082;
+  font-size: 13px;
+  text-align: center;
+}
+
+.album-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.album-skeleton-grid span {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: #e4eee7;
+}
+
+.mobile-app > .screen.has-tabbar.photographer-album-screen > .photographer-album-empty {
+  flex: 0 0 auto;
+  min-height: 238px;
+  margin: 44px 0 24px;
+  padding: 28px 18px;
+  border: 1px dashed #d6e5da;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .58);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .album-skeleton-grid span,
+  .photographer-task-loading > span {
+    background-image: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .62) 42%, transparent 64%);
+    background-size: 220% 100%;
+    animation: photographer-skeleton 1.45s ease-in-out infinite;
+  }
+}
+
+@keyframes photographer-skeleton {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@container mobile-shell (max-width: 360px) {
+  .photographer-tasks-screen,
+  .photographer-album-screen {
+    padding-inline: 16px;
+  }
+
+  .photographer-tasks-screen .photographer-hero {
+    margin-inline: -16px;
+    padding-inline: 18px;
+  }
+
+  .photographer-tasks-screen .joinable-room-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .photographer-tasks-screen .joinable-room-cover {
+    width: 44px;
+    height: 44px;
+  }
+
+  .photographer-tasks-screen .joinable-room-meta {
+    grid-column: 2;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .photographer-tasks-screen .task-card {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 12px;
+  }
+
+  .photographer-tasks-screen .task-cover {
+    width: 44px;
+    height: 44px;
+  }
+
+  .photographer-tasks-screen .task-room-name {
+    font-size: 14px;
+  }
+
+  .photographer-tasks-screen .task-enter-btn,
+  .photographer-tasks-screen .task-wait-btn {
+    margin-left: 0;
+    padding-inline: 9px;
+  }
+}
+
+@media (max-height: 699px) {
+  .photographer-tasks-screen .photographer-hero {
+    height: 132px;
+    min-height: 132px;
+    padding-block: 22px;
+  }
+
+  .photographer-tasks-screen .photographer-task-empty,
+  .photographer-album-screen .photographer-album-empty {
+    min-height: 190px;
+  }
+}
+
+/* 最终级联层：摄影师任务卡与个人页移动端避让。 */
+.photographer-my-tasks .task-list .task-card {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 0;
+  padding: 14px;
+  border: 1px solid #d6e6da;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #fff 0%, #f1f8f3 100%);
+  box-shadow: 0 10px 26px rgba(31, 75, 47, .08);
+}
+
+.photographer-my-tasks .task-list .task-cover {
+  width: 82px;
+  height: 82px;
+  border-radius: 15px;
+}
+
+.photographer-my-tasks .task-list .task-room-name { font-size: 17px; }
+.photographer-my-tasks .task-list .task-room-num {
+  margin-top: 5px;
+  color: #667b70;
+  font-size: 13px;
+}
+
+.photographer-my-tasks .task-list .task-enter-btn,
+.photographer-my-tasks .task-list .task-wait-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 44px;
+  margin-left: 0;
+  justify-self: stretch;
+  justify-content: center;
+  padding-inline: 12px;
+  border-radius: 13px;
+  font-size: 14px;
+}
+
+.photographer-my-tasks .task-list-done .task-enter-btn,
+.photographer-my-tasks .task-list-done .task-wait-btn {
+  background: #e7f2ea;
+  color: #246a43;
+}
+
+.mobile-app > .screen.has-tabbar.photographer-my-screen {
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+}
+
+.mobile-app > .screen.photographer-my-screen .mini-header {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  flex-shrink: 0;
+  margin-bottom: 0;
+  background: transparent;
+}
+
+.photographer-my-screen .my-hero {
+  position: relative;
+  isolation: isolate;
+  margin: 0 -20px 18px;
+  padding: 18px 20px 26px;
+  overflow: hidden;
+  border-radius: 0 0 28px 28px;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(255,255,255,.82) 0 42px, transparent 43px),
+    linear-gradient(145deg, #edf7f0 0%, #dcefe2 100%);
+}
+
+.photographer-my-screen .my-hero::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -34px;
+  bottom: -64px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.38);
+}
+
+.photographer-my-screen .my-signout-btn {
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.photographer-my-screen .my-deactivate-area {
+  margin-top: 0;
+  padding-bottom: 2px;
+}
+
+.photographer-my-screen .my-version { margin-bottom: 22px; }
+
+@container mobile-shell (max-width: 360px) {
+  .photographer-my-tasks .task-list .task-card {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 11px;
+    padding: 12px;
+  }
+
+  .photographer-my-tasks .task-list .task-cover {
+    width: 70px;
+    height: 70px;
+  }
+
+  .photographer-my-screen .my-hero {
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+}
+
+/* 摄影师个人页 V3 最终级联。 */
+.mobile-app > .screen.has-tabbar.photographer-my-screen {
+  padding-inline: 18px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  background: #f7f6f1;
+}
+
+.mobile-app > .screen.photographer-my-screen .mini-header {
+  min-height: 56px;
+  margin: 0 -18px;
+  padding: 0 18px;
+  grid-template-columns: 42px 1fr 42px;
+}
+
+.photographer-my-screen .mini-header strong { font-size: 18px; font-weight: 760; }
+.photographer-my-screen .my-edit-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #dce8df;
+  border-radius: 13px;
+  background: rgba(255,255,255,.88);
+}
+
+.photographer-my-screen .my-hero {
+  margin: 0 -18px 14px;
+  padding: 12px 18px 18px;
+  border-radius: 0 0 24px 24px;
+  background: #e4f1e8;
+}
+.photographer-my-screen .my-hero::after { display: none; }
+.photographer-my-screen .my-avatar-wrap,
+.photographer-my-screen .my-avatar { width: 74px; height: 74px; }
+.photographer-my-screen .my-avatar-wrap { margin-bottom: 2px; }
+.photographer-my-screen .my-avatar-edit { width: 24px; height: 24px; bottom: 0; right: 0; }
+.photographer-my-screen .my-name { font-size: 21px; line-height: 1.2; }
+.photographer-my-screen .my-role-tag { padding: 3px 10px; font-size: 12px; }
+
+.photographer-my-screen > .my-section-card:not(.my-menu-card) {
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+}
+.photographer-my-screen .my-section-title {
+  margin-bottom: 6px;
+  font-size: 12px;
+  letter-spacing: .03em;
+  text-transform: none;
+}
+.photographer-my-screen .my-info-row { padding: 7px 0; }
+.photographer-my-screen .my-info-label { font-size: 13px; }
+.photographer-my-screen .my-info-value { font-size: 14px; }
+
+.photographer-settings-groups {
+  display: grid;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-bottom: 14px;
+}
+.photographer-settings-group > h3 {
+  margin: 0 0 6px 4px;
+  color: #6d8477;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.photographer-settings-group .my-section-card {
+  margin: 0;
+  padding: 2px 14px;
+  border-radius: 18px;
+}
+.photographer-settings-group .my-menu-item {
+  min-height: 50px;
+  padding: 9px 0;
+  gap: 11px;
+}
+.photographer-settings-group .my-menu-icon { width: 32px; height: 32px; border-radius: 10px; }
+.photographer-settings-group .my-menu-label { font-size: 14px; }
+.photographer-settings-group .my-menu-value { color: #789083; font-size: 13px; }
+.photographer-settings-group .my-menu-arrow { color: #9aafa2; }
+
+.photographer-my-screen .my-signout-btn {
+  min-height: 46px;
+  margin: 0 0 4px;
+  padding: 11px 14px;
+  border-radius: 15px;
+  background: #fffafa;
+}
+.photographer-my-screen .my-deactivate-area { min-height: 40px; margin-top: 0; padding: 0; }
+.photographer-my-screen .my-deactivate-btn { min-height: 40px; color: #a75e5e; font-size: 12px; }
+.photographer-my-screen .my-version {
+  margin: 0 0 14px;
+  color: #a9b5ae;
+  font-size: 11px;
+}
+.mobile-app > .screen.photographer-my-screen .bottom-nav {
+  margin: 0 -18px calc(-12px - env(safe-area-inset-bottom));
+}
+
+@container mobile-shell (max-width: 360px) {
+  .mobile-app > .screen.has-tabbar.photographer-my-screen { padding-inline: 16px; }
+  .mobile-app > .screen.photographer-my-screen .mini-header,
+  .photographer-my-screen .my-hero,
+  .mobile-app > .screen.photographer-my-screen .bottom-nav { margin-inline: -16px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   摄影师工作台 V4：统一移动 H5 页面骨架、字号与长列表关系
+   - 主导航固定占位，不再覆盖任务、照片或账号操作
+   - 页面正文只有一个滚动容器
+   - 390px / 320px 使用同一层级，仅在窄屏重排
+   ═══════════════════════════════════════════════════════════════════ */
+.my-page-scroll-pass-through { display: contents; }
+
+.mobile-app > .screen:is(
+  .photographer-tasks-screen,
+  .photographer-album-screen,
+  .photographer-my-screen
+) {
+  padding: 0;
+  overflow: hidden;
+  background: #f7f6f1;
+}
+
+/* 覆盖个人页旧版高特异性内边距，避免正文和底栏被重复缩进。 */
+.mobile-app > .screen.padded-screen.has-tabbar.photographer-tasks-screen,
+.mobile-app > .screen.padded-screen.has-tabbar.photographer-album-screen,
+.mobile-app > .screen.padded-screen.has-tabbar.photographer-my-screen {
+  padding: 0 !important;
+}
+
+.photographer-tasks-screen > .photographer-page-scroll,
+.photographer-album-screen > .photographer-page-scroll,
+.photographer-my-screen > .photographer-page-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.photographer-tasks-screen > .photographer-page-scroll,
+.photographer-album-screen > .photographer-page-scroll {
+  padding: 0 20px 24px;
+}
+
+.photographer-my-screen > .photographer-page-scroll {
+  padding: 0 18px 24px;
+}
+
+.photographer-page-scroll::-webkit-scrollbar { display: none; }
+
+.mobile-app > .screen:is(
+  .photographer-tasks-screen,
+  .photographer-album-screen,
+  .photographer-my-screen
+) > .bottom-nav {
+  position: relative;
+  inset: auto;
+  z-index: 8;
+  width: 100%;
+  margin: 0 !important;
+  flex: 0 0 auto;
+  box-shadow: 0 -8px 24px rgba(28, 66, 43, .045);
+}
+
+/* 字体层级：页标题 30 / 区块标题 20 / 卡片标题 16 / 正文 14 / 辅助 12。 */
+:is(.photographer-tasks-screen, .photographer-album-screen) h1 {
+  font-size: 30px;
+  line-height: 1.18;
+  letter-spacing: -.025em;
+}
+
+:is(.photographer-join-screen, .photographer-flow-screen, .upload-screen, .ps-page) .mini-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  min-height: 64px;
+  margin: 0 -20px 16px;
+  padding: 0 20px;
+  background: rgba(248, 247, 242, .94);
+  backdrop-filter: blur(14px);
+}
+
+:is(.photographer-join-screen, .photographer-flow-screen, .upload-screen, .ps-page) .mini-header strong {
+  font-size: 19px;
+  font-weight: 760;
+}
+
+:is(.photographer-join-screen, .photographer-flow-screen, .upload-screen, .ps-page) :is(button, input, textarea) {
+  touch-action: manipulation;
+}
+
+/* 任务：切换只改变状态，不改变骨架；辅助入口与任务主卡保持清晰距离。 */
+.photographer-tasks-screen .photographer-my-tasks { margin-bottom: 16px; }
+.photographer-tasks-screen .scan-room { margin-bottom: 18px; }
+.photographer-tasks-screen .joinable-room-section { margin-bottom: 0; }
+.photographer-tasks-screen .joinable-room-list { padding-bottom: 0; }
+
+.photographer-my-tasks .task-list .task-card,
+.photographer-my-tasks .task-list-done .task-card-completed {
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 13px;
+  padding: 13px;
+  border-radius: 18px;
+}
+
+.photographer-my-tasks .task-list .task-cover,
+.photographer-my-tasks .task-list-done .task-cover {
+  width: 76px;
+  height: 76px;
+  border-radius: 14px;
+}
+
+.photographer-my-tasks .task-list .task-room-name,
+.photographer-my-tasks .task-list-done .task-room-name { font-size: 16px; }
+
+.photographer-my-tasks .task-list .task-enter-btn,
+.photographer-my-tasks .task-list .task-wait-btn,
+.photographer-my-tasks .task-list-done .task-enter-btn,
+.photographer-my-tasks .task-list-done .task-wait-btn {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 44px;
+  justify-self: stretch;
+  justify-content: center;
+}
+
+/* 相册：筛选与照片网格属于同一个滚动层，末行完整落在底栏上方。 */
+.photographer-album-screen .room-filter-scroll {
+  margin-bottom: 14px;
+  padding: 0 1px 4px;
+}
+
+.photographer-album-screen .photo-album-grid {
+  gap: 4px;
+  padding-bottom: 12px;
+}
+
+.photographer-album-screen .pa-item { border-radius: 8px; }
+.photographer-album-screen .pa-delete-btn { width: 44px; height: 44px; }
+
+/* 上传：任务、选择、画质、队列和主行动形成连续阅读顺序。 */
+.upload-screen { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.upload-screen .mini-header {
+  border-bottom: 1px solid rgba(210, 224, 214, .9);
+  background: #f8f7f2;
+  box-shadow: 0 7px 18px rgba(39, 82, 55, .055);
+}
+.upload-screen .upload-zone-wrap,
+.upload-screen .upload-quality-card,
+.upload-screen .upload-list { flex-shrink: 0; }
+.upload-screen .upload-zone {
+  height: 138px;
+  margin: 14px 0 16px;
+}
+.upload-screen .upload-quality-card {
+  margin-bottom: 14px;
+}
+.upload-screen .upload-quality-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.upload-screen .upload-quality-options button {
+  min-height: 82px;
+  padding: 10px 7px;
+  text-align: center;
+}
+.upload-screen .upload-quality-options button strong {
+  margin-bottom: 5px;
+}
+.upload-screen .upload-quality-options button small {
+  font-size: 10px;
+  line-height: 1.45;
+}
+.upload-screen .upload-list {
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.upload-screen .upload-item {
+  min-height: 66px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 11px;
+  padding: 9px;
+  border: 1px solid #e1e9e3;
+  border-radius: 15px;
+  box-shadow: 0 6px 18px rgba(39, 82, 55, .05);
+}
+.upload-screen > .primary-button { margin-top: 2px; }
+.upload-screen > .manage-history { margin-bottom: 8px; }
+
+/* 短流程：压缩异常留白来源，内容保持靠上但不挤在导航下。 */
+.photographer-join-screen .photo-join-note { margin-top: 0; }
+.photographer-join-screen .join-room-field,
+.photographer-join-screen .password-room-info,
+.photo-wait-screen .wait-room-card,
+.photo-wait-screen .wait-status-area,
+.photo-delete-screen .delete-photo-preview,
+.photo-delete-screen .delete-note { flex-shrink: 0; }
+
+.photo-delete-screen .delete-photo-preview { max-height: 220px; }
+
+/* 我的：正文独立滚动，底栏始终单独占位。 */
+.photographer-my-screen .mini-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 12 !important;
+  background: rgba(247, 246, 241, .94) !important;
+  backdrop-filter: blur(14px);
+}
+.photographer-my-screen .my-hero { margin-bottom: 16px; }
+.photographer-my-screen .photographer-settings-groups { margin-bottom: 16px; }
+.photographer-my-screen .my-signout-btn { margin-top: 0; }
+.photographer-my-screen .my-version { margin-bottom: 4px; }
+
+/* 设置：同一页头、卡片、正文和弹层尺度。 */
+.ps-page .ps-section { margin-bottom: 18px; }
+.ps-page .ps-section-title {
+  margin-left: 2px;
+  color: #607c6c;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.ps-page .ps-card { border-radius: 18px; }
+.ps-page .ps-modal { max-height: 88dvh; }
+.ps-page .ps-legal-text {
+  font-size: 13px;
+  line-height: 1.72;
+  white-space: pre-wrap;
+}
+.ps-page .ps-feedback-input { min-height: 132px; }
+
+@container mobile-shell (max-width: 360px) {
+  .photographer-tasks-screen > .photographer-page-scroll,
+  .photographer-album-screen > .photographer-page-scroll,
+  .photographer-my-screen > .photographer-page-scroll {
+    padding-inline: 16px;
+  }
+
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero,
+  .mobile-app > .screen.photographer-album-screen .photographer-album-heading,
+  .mobile-app > .screen.photographer-my-screen .mini-header,
+  .photographer-my-screen .my-hero {
+    margin-inline: -16px;
+  }
+
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero {
+    height: 150px;
+    min-height: 150px;
+    padding: 22px 18px 18px;
+    border-radius: 0 0 26px 26px;
+  }
+
+  .mobile-app > .screen.photographer-tasks-screen .photographer-cutout {
+    top: 18px;
+    right: 8px;
+    width: 108px;
+    height: 96px;
+    border-radius: 22px 22px 17px 22px;
+  }
+
+  .photographer-hero-copy { width: 64%; }
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero-copy h1 { font-size: 27px; }
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero-copy > span {
+    max-width: 176px;
+    font-size: 12px;
+  }
+
+  .photographer-section-heading h2 { font-size: 19px; }
+  .photographer-section-heading p { font-size: 12px; }
+
+  .upload-screen .upload-quality-options {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-screen .upload-quality-options button {
+    min-height: 52px;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  .photographer-my-tasks .task-list .task-card,
+  .photographer-my-tasks .task-list-done .task-card-completed {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px;
+  }
+  .photographer-my-tasks .task-list .task-cover,
+  .photographer-my-tasks .task-list-done .task-cover {
+    width: 64px;
+    height: 64px;
+  }
+
+  .mobile-app > .screen.photographer-album-screen .photographer-album-heading {
+    min-height: 124px;
+    padding: 24px 68px 20px 18px;
+    border-radius: 0 0 24px 24px;
+  }
+  .photographer-album-heading h1 { font-size: 27px; }
+  .photographer-album-heading p { font-size: 13px; }
+  .photographer-album-heading-icon { top: 26px; right: 18px; width: 42px; height: 42px; }
+
+  :is(.photographer-join-screen, .photographer-flow-screen, .upload-screen, .ps-page) {
+    padding-inline: 16px;
+  }
+  :is(.photographer-join-screen, .photographer-flow-screen, .upload-screen, .ps-page) .mini-header {
+    min-height: 58px;
+    margin-inline: -16px;
+    padding-inline: 16px;
+  }
+
+  .upload-screen .upload-zone { height: 140px; }
+  .upload-screen .upload-quality-card { padding: 14px; }
+  .upload-screen .upload-quality-options button { min-height: 52px; }
+  .upload-screen .upload-quality-options button small { font-size: 11px; }
+
+  .photographer-join-screen .photo-join-note { padding: 14px; }
+  .photographer-join-screen .photo-join-note p { font-size: 13px; }
+  .photographer-join-screen .password-boxes { gap: 5px; }
+  .photographer-join-screen .digit-box { border-radius: 10px; }
+
+  .ps-page .ps-card { padding: 14px; }
+  .ps-page .ps-category-grid { gap: 7px; }
+  .ps-page .ps-category-btn { min-height: 40px; padding-inline: 10px; }
+}
+
+@media (max-height: 620px) {
+  .mobile-app > .screen.photographer-tasks-screen .photographer-hero {
+    height: 132px;
+    min-height: 132px;
+    padding-block: 18px;
+  }
+  .mobile-app > .screen.photographer-tasks-screen .photographer-cutout {
+    top: 14px;
+    height: 88px;
+  }
+  .upload-screen .upload-zone { height: 132px; margin-block: 10px 14px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   游客端移动 H5 视觉体系 V2（摄影师端同源层级）
+   页面 30 / 区块 20 / 卡片 16 / 正文 14 / 辅助 12；单一滚动层。
+   ═══════════════════════════════════════════════════════════════════ */
+.tourist-profile-screen > .tourist-page-scroll {
+  padding: 0 18px 24px;
+}
+.tourist-profile-screen .tourist-profile-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  min-height: 56px;
+  margin: 0 -18px;
+  padding: 0 18px;
+  grid-template-columns: 42px 1fr 42px;
+  background: rgba(247,246,241,.94);
+  backdrop-filter: blur(14px);
+}
+.tourist-profile-screen .tourist-profile-header strong {
+  color: #173c29;
+  font-size: 18px;
+  font-weight: 760;
+}
+.tourist-profile-screen .my-edit-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #dce8df;
+  border-radius: 13px;
+  background: rgba(255,255,255,.88);
+}
+.tourist-profile-screen .my-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 -18px 14px;
+  padding: 12px 18px 18px;
+  border: 0;
+  border-radius: 0 0 24px 24px;
+  background:
+    radial-gradient(circle at 84% 28%, rgba(255,255,255,.78) 0 34px, transparent 35px),
+    radial-gradient(circle at 94% 108%, rgba(255,255,255,.48) 0 86px, transparent 87px),
+    #e4f1e8;
+  box-shadow: none;
+}
+.tourist-profile-screen .my-avatar-wrap,
+.tourist-profile-screen .my-avatar { width: 74px; height: 74px; }
+.tourist-profile-screen .my-avatar-wrap { margin: 0 0 2px; }
+.tourist-profile-screen .my-avatar-edit { width: 24px; height: 24px; right: 0; bottom: 0; }
+.tourist-profile-screen .my-hero-copy { display: contents; text-align: center; }
+.tourist-profile-screen .my-name { margin: 0; font-size: 21px; line-height: 1.2; }
+.tourist-profile-screen .my-role-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(31,122,77,.09);
+  font-size: 12px;
+}
+.tourist-profile-screen .tourist-account-card {
+  margin: 0 0 14px;
+  padding: 2px 16px;
+}
+.tourist-profile-screen .my-section-title {
+  margin: 0 0 6px;
+  color: #769183;
+  font-size: 12px;
+  letter-spacing: .03em;
+  text-transform: none;
+}
+.tourist-profile-screen .my-info-row { padding: 8px 0; }
+.tourist-profile-screen .my-info-label { font-size: 13px; }
+.tourist-profile-screen .my-info-value { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+.tourist-profile-screen .tourist-settings-label {
+  margin: 12px 0 6px 4px;
+  color: #6d8477;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.tourist-profile-screen .my-section-card {
+  padding: 2px 14px;
+  border-radius: 18px;
+}
+.tourist-profile-screen .my-menu-item {
+  min-height: 50px;
+  padding: 9px 0;
+  gap: 11px;
+}
+.tourist-profile-screen .my-menu-icon,
+.tourist-profile-screen .my-menu-icon.blue,
+.tourist-profile-screen .my-menu-icon.green,
+.tourist-profile-screen .my-menu-icon.amber,
+.tourist-profile-screen .my-menu-icon.muted {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.tourist-profile-screen .my-menu-label { font-size: 14px; }
+.tourist-profile-screen .my-menu-value { font-size: 13px; }
+.tourist-profile-screen .my-signout-btn {
+  min-height: 46px;
+  margin: 16px 0 4px;
+  padding: 11px 14px;
+  border-radius: 15px;
+  background: #fffafa;
+}
+.tourist-profile-screen .my-deactivate-area { min-height: 40px; margin: 0; padding: 0; }
+.tourist-profile-screen .my-deactivate-btn { min-height: 40px; color: #a75e5e; font-size: 12px; transform: none; }
+.tourist-profile-screen .my-version { margin: 0 0 4px; color: #a9b5ae; font-size: 11px; }
+
+/* 最近记录：与摄影师任务卡共享同一信息密度，状态切换不改变骨架。 */
+.tourist-recent-screen .tourist-simple-page-header { margin: 10px 0 20px; }
+.tourist-recent-screen .tourist-simple-page-header h1 { font-size: 30px; letter-spacing: -.025em; }
+.tourist-recent-screen .recent-room-list { gap: 12px; padding: 0 0 24px; }
+.tourist-recent-screen .recent-room-content { display: grid; gap: 12px; }
+.tourist-recent-screen .recent-room-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3px;
+  color: #173c29;
+}
+.tourist-recent-screen .recent-room-toolbar strong { font-size: 17px; }
+.tourist-recent-screen .recent-room-toolbar span { color: #789083; font-size: 12px; }
+.tourist-recent-screen .recent-explore-entry {
+  width: 100%;
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 1px solid #dce8df;
+  border-radius: 18px;
+  background: linear-gradient(135deg,#f3f8f4,#fff);
+  color: #758a7e;
+  text-align: left;
+  box-shadow: 0 8px 22px rgba(33,71,47,.045);
+}
+.tourist-recent-screen .recent-explore-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #e2f0e7;
+  color: #1f8352;
+}
+.tourist-recent-screen .recent-explore-copy { display: grid; gap: 3px; }
+.tourist-recent-screen .recent-explore-copy strong { color: #244936; font-size: 15px; }
+.tourist-recent-screen .recent-explore-copy small { color: #81968a; font-size: 12px; }
+.tourist-recent-screen .recent-room-card {
+  min-height: 94px;
+  gap: 13px;
+  padding: 13px;
+  border: 1px solid #dce8df;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(33,71,47,.055);
+}
+.tourist-recent-screen .rec-room-cover-small {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+}
+.tourist-recent-screen .recent-room-info { gap: 4px; }
+.tourist-recent-screen .recent-room-name { font-size: 16px; line-height: 1.35; }
+.tourist-recent-screen .recent-enter-btn {
+  min-width: 70px;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: 13px;
+  font-size: 13px;
+}
+
+/* 房间首页与加入流程：强化主次关系，不改变搜索、加入和返回。 */
+.tourist-home-screen .tourist-room-section-heading h2 { font-size: 19px; }
+.tourist-home-screen .tourist-room-section-heading { margin-top: 20px; }
+.tourist-home-screen .room-card {
+  grid-template-columns: 84px minmax(0,1fr) 34px;
+  min-height: 110px;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 18px;
+}
+.tourist-home-screen .room-card-cover,
+.tourist-home-screen .room-card .scenic-art.compact {
+  width: 84px;
+  min-width: 84px;
+  height: 88px;
+  border-radius: 13px;
+}
+.tourist-home-screen .room-card-copy { padding: 2px 0; }
+.tourist-home-screen .room-card-title-row { margin-bottom: 5px; }
+.tourist-home-screen .room-card-copy h3 { font-size: 18px; }
+.tourist-home-screen .room-card-meta,
+.tourist-home-screen .room-card-guide { font-size: 13px; }
+.tourist-home-screen .room-card-enter { min-width: 44px; margin-right: -10px; }
+.password-room-info { margin-top: 4px; padding: 18px; }
+.password-room-info h3 { font-size: 19px; }
+.password-hint { margin: 0 0 12px; color: #62796c; font-size: 13px; }
+.password-boxes { gap: 8px; margin-bottom: 18px; }
+.digit-box { min-width: 0; height: 52px; border-radius: 13px; font-size: 20px; }
+
+/* 房间内页面：统一控件、字幕卡片、空状态与安全区域。 */
+.subtitle-tab-header { min-height: 64px; padding: 12px 16px; }
+.subtitle-tab-title { font-size: 18px; }
+.lang-seg-ctrl button { min-height: 36px; padding-inline: 11px; }
+.subtitle-font-ctrl button { width: 36px; height: 36px; border-radius: 10px; }
+.subtitle-tab-body { gap: 12px; padding: 14px 16px 10px; }
+.subtitle-block { padding: 14px 15px; border: 1px solid #e0e9e2; border-radius: 16px; box-shadow: 0 6px 18px rgba(39,82,55,.045); }
+.subtitle-tab-empty { transform: none; }
+.empty-state .empty-title { font-size: 18px; line-height: 1.4; }
+.empty-state .empty-desc { max-width: 280px; font-size: 13px; line-height: 1.65; }
+.empty-state .empty-action-btn { min-height: 44px; }
+.weaknet-modal,
+.room-ended-card { border-radius: 22px; box-shadow: 0 24px 64px rgba(13,39,24,.22); }
+
+/* 通知、帮助与卡片详情：长内容由页面自身滚动，避免底部裁切。 */
+.mobile-app > .screen.support-page,
+.mobile-app > .screen.tourist-card-detail-screen {
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(30px + env(safe-area-inset-bottom));
+}
+.support-page .mini-header,
+.tourist-card-detail-screen .mini-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  min-height: 62px;
+  background: rgba(247,246,241,.94);
+  backdrop-filter: blur(14px);
+}
+.support-notice { min-height: 82px; padding: 14px; border-radius: 17px; }
+.support-notice-body b { font-size: 15px; line-height: 1.4; }
+.support-notice-body time { font-size: 11px; }
+.tourist-card-detail-screen > article {
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #dfe9e2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(33,71,47,.055);
+}
+.tourist-card-detail-screen > article h1 { margin: 0 0 6px; color: #173c29; font-size: 24px; line-height: 1.25; }
+.tourist-card-detail-screen > article h3 { margin: 0; color: #60756a; font-size: 14px; line-height: 1.45; }
+.tourist-card-detail-screen > article .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0; }
+.tourist-card-detail-screen > article .tag-row span { display: inline-flex; align-items: center; gap: 4px; padding: 6px 9px; border-radius: 9px; background: #e8f3eb; color: #27784c; font-size: 11px; }
+.tourist-card-detail-screen > article .tag-row svg { width: 13px; height: 13px; }
+.tourist-card-detail-screen .knowledge-card-image { width: 100%; max-height: 260px; object-fit: cover; border-radius: 14px; }
+.tourist-card-detail-screen .detail-zh { font-size: 14px; line-height: 1.75; }
+.tourist-card-detail-screen .detail-en { font-size: 13px; line-height: 1.7; }
+.tourist-card-detail-screen .built-note { min-height: 40px; font-size: 12px; }
+.tourist-card-detail-screen .primary-button { min-height: 48px; }
+
+@container mobile-shell (max-width: 360px) {
+  .tourist-profile-screen > .tourist-page-scroll { padding-inline: 16px; }
+  .tourist-profile-screen .tourist-profile-header,
+  .tourist-profile-screen .my-hero { margin-inline: -16px; }
+  .tourist-recent-screen .rec-room-cover-small { width: 60px; height: 60px; }
+  .tourist-recent-screen .recent-room-card { gap: 10px; padding: 11px; }
+  .tourist-recent-screen .recent-enter-btn { min-width: 62px; padding-inline: 9px; }
+  .subtitle-tab-header { gap: 6px; padding-inline: 12px; }
+  .subtitle-tab-title { font-size: 16px; }
+  .lang-seg-ctrl button { padding-inline: 8px; }
+  .subtitle-font-ctrl button { width: 32px; }
+  .password-boxes { gap: 5px; }
+  .digit-box { height: 48px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   导游端 / 游客端移动 H5 统一视觉骨架（2026-08 审查修复）
+   锁定保留导游首页人物抠图与三项数据面板，只校正移动端关系。
+   ═══════════════════════════════════════════════════════════════════ */
+.mobile-app > .screen:is(.guide-home-screen,.rec-page,.tourist-home-screen,.tourist-recent-screen,.tourist-profile-screen) {
+  padding: 0 !important;
+  overflow: hidden;
+  background: #f7f6f1;
+}
+
+.guide-home-screen > .guide-page-scroll,
+.rec-page > .rec-page-scroll,
+.tourist-home-screen > .tourist-page-scroll,
+.tourist-recent-screen > .tourist-page-scroll,
+.tourist-profile-screen > .tourist-page-scroll,
+.my-page > .my-page-scroll-pass-through {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 16px 20px 28px;
+}
+.tourist-home-screen > .tourist-page-scroll { padding-top: 20px; }
+.tourist-profile-screen > .tourist-page-scroll { padding-top: 28px; }
+.my-page > .my-page-scroll-pass-through { display: block; }
+.guide-page-scroll::-webkit-scrollbar,
+.rec-page-scroll::-webkit-scrollbar,
+.tourist-page-scroll::-webkit-scrollbar,
+.my-page-scroll-pass-through::-webkit-scrollbar { display: none; }
+
+.mobile-app > .screen:is(.guide-home-screen,.rec-page,.tourist-home-screen,.tourist-recent-screen,.tourist-profile-screen,.my-page) > .bottom-nav {
+  position: relative;
+  inset: auto;
+  z-index: 12;
+  width: 100%;
+  margin: 0 !important;
+  flex: 0 0 auto;
+  box-shadow: 0 -8px 24px rgba(28,66,43,.05);
+}
+
+/* 导游首页：欢迎语、人物、统计面板的原组件和信息关系保持不变。 */
+.guide-home-screen .guide-hero { height: 190px; }
+.guide-home-screen .guide-hero span { max-width: 150px; font-size: 14px; line-height: 1.55; }
+.guide-home-screen .guide-portrait-crop { right: -8px; bottom: -62px; width: 210px; height: 210px; }
+.guide-home-screen .guide-stats { height: 112px; border-radius: 22px; padding-inline: 4px; }
+.guide-home-screen .guide-stats span { width: 36px; height: 36px; }
+.guide-home-screen .guide-stats b { font-size: 18px; line-height: 1; }
+.guide-home-screen .guide-stats small { font-size: 12px; line-height: 1.3; }
+.guide-home-screen .current-room { padding: 16px; border-radius: 20px; }
+.guide-home-screen .current-room-main { grid-template-columns: 116px minmax(0,1fr); gap: 14px; }
+.guide-home-screen .guide-room-photo { width: 116px; height: 98px; }
+.guide-home-screen .current-room-main h2 { font-size: 18px; line-height: 1.35; }
+.guide-home-screen .current-room-main :is(span,p),
+.guide-home-screen .history-room-list small,
+.guide-home-screen .current-room .title-row b { font-size: 12px; }
+.guide-home-screen .history-room-list strong { font-size: 15px; line-height: 1.35; }
+.guide-home-screen .history-room-list > div > b { font-size: 12px; }
+
+/* 记录页：同级信息使用同一字号，操作满足移动触控高度。 */
+.rec-page .mini-header { min-height: 56px; margin: -4px 0 12px; }
+.rec-page .mini-header strong { font-size: 20px; }
+.rec-page .rec-stats-row { margin-bottom: 14px; }
+.rec-page .rec-stat-card { min-height: 72px; padding: 12px 6px; }
+.rec-page .rec-stat-label { font-size: 12px; }
+.rec-page .rec-room-card { padding: 14px; border-radius: 18px; }
+.rec-page .rec-room-name { font-size: 16px; line-height: 1.35; }
+.rec-page .rec-room-action { min-height: 40px; padding: 8px 12px; font-size: 14px; }
+
+/* 我的页：正文独立滚动，退出、注销及版本不再被底栏遮挡。 */
+.my-page > .my-page-scroll-pass-through { padding-bottom: 28px; }
+.my-page .mini-header {
+  position: sticky;
+  top: -16px;
+  z-index: 10;
+  min-height: 56px;
+  margin: -16px -20px 0;
+  padding: 0 20px;
+  background: rgba(247,246,241,.94);
+  backdrop-filter: blur(14px);
+}
+.my-page .mini-header strong { font-size: 20px; }
+.my-page .my-section-card { border: 1px solid #dce8df; box-shadow: 0 8px 24px rgba(33,71,47,.055); }
+.my-page .my-menu-item { min-height: 52px; }
+.my-page .my-menu-label { font-size: 15px; font-weight: 650; }
+.my-page .my-signout-btn { min-height: 50px; margin-top: 16px; }
+.my-page .my-deactivate-area { padding: 0 0 4px; }
+.my-page .my-deactivate-btn { min-height: 44px; transform: translateY(-2px); }
+
+/* 游客端信息层级。 */
+.tourist-home-screen .tourist-welcome-copy span,
+.tourist-simple-page-header p { font-size: 14px; line-height: 1.55; }
+.tourist-home-screen .room-card-copy h3 { font-size: 16px; }
+.tourist-home-screen .room-card-meta,
+.tourist-home-screen .room-card-guide,
+.tourist-recent-screen .recent-room-meta,
+.tourist-recent-screen .recent-room-status { font-size: 12px; }
+.tourist-recent-screen .recent-room-name { font-size: 16px; }
+.tourist-recent-screen .recent-enter-btn { min-height: 40px; min-width: 64px; font-size: 13px; }
+.tourist-profile-screen .tourist-simple-page-header { margin-bottom: 20px; }
+
+/* 房间内、列表空状态和反馈表单使用可读的小字号下限。 */
+.listening-screen :is(.room-meta,.listener-status,.sync-state,.section-heading),
+.guide-voice-console :is(.live-host-card p,.voice-panel-heading,.voice-tip),
+.guest-list-screen :is(.guest-stat-label,.guest-empty-copy),
+.guide-subtitle-record-screen :is(.record-info,.empty-desc),
+.support-page :is(.support-section-label,.support-faq-answer),
+.help-feedback-screen :is(label,.feedback-count),
+.room-album-screen :is(.album-count,.empty-desc) { font-size: 12px; line-height: 1.5; }
+.listening-screen .ask-fab,
+.room-album-screen .empty-action-btn,
+.help-feedback-screen .support-submit-btn { min-height: 48px; }
+
+@container mobile-shell (max-width: 360px) {
+  .guide-home-screen > .guide-page-scroll,
+  .rec-page > .rec-page-scroll,
+  .tourist-home-screen > .tourist-page-scroll,
+  .tourist-recent-screen > .tourist-page-scroll,
+  .tourist-profile-screen > .tourist-page-scroll,
+  .my-page > .my-page-scroll-pass-through { padding-inline: 16px; }
+
+  .guide-home-screen .guide-hero { height: 176px; }
+  .guide-home-screen .guide-hero > div:first-child { max-width: 62%; }
+  .guide-home-screen .guide-hero h1 { font-size: 26px; }
+  .guide-home-screen .guide-hero span { max-width: 132px; font-size: 13px; }
+  .guide-home-screen .guide-portrait-crop { right: -2px; bottom: -35px; width: 150px; height: 150px; }
+  .guide-home-screen .guide-stats { height: 104px; }
+  .guide-home-screen .guide-stats span { width: 32px; height: 32px; }
+  .guide-home-screen .current-room-main { grid-template-columns: 104px minmax(0,1fr); gap: 12px; }
+  .guide-home-screen .guide-room-photo { width: 104px; height: 88px; }
+  .guide-home-screen .current-room-main h2 { font-size: 16px; }
+  .guide-home-screen .current-room-main strong { font-size: 18px; }
+
+  .rec-page .rec-stats-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .rec-page .rec-room-card { gap: 10px; padding: 12px; }
+  .rec-page .rec-room-cover { width: 52px; height: 52px; }
+
+  .tourist-home-screen .tourist-welcome-hero { min-height: 196px; }
+  .tourist-home-screen .tourist-welcome-copy { max-width: 62%; }
+  .tourist-home-screen .tourist-welcome-copy p { font-size: 13px; white-space: nowrap; }
+  .tourist-home-screen .tourist-welcome-person { right: -12px; width: 51%; }
+  .tourist-home-screen .room-card { grid-template-columns: 80px minmax(0,1fr) 18px; }
+  .tourist-home-screen .room-card-cover,
+  .tourist-home-screen .room-card .scenic-art.compact { width: 80px; height: 88px; }
+}
+
+/* 游客端 V2 最终级联：避免旧审查补丁覆盖本轮统一尺度。 */
+.tourist-profile-screen > .tourist-page-scroll { padding: 0 18px 24px; }
+.tourist-profile-screen .tourist-profile-header { margin: 0 -18px; padding: 0 18px; }
+.tourist-profile-screen .tourist-account-label { margin-top: 0; }
+.tourist-profile-screen .my-menu-item { min-height: 50px; }
+.tourist-profile-screen .my-menu-label { font-size: 14px; }
+.tourist-profile-screen .my-signout-btn { min-height: 46px; margin: 16px 0 4px; }
+.tourist-profile-screen .my-deactivate-area { padding: 0; }
+.tourist-profile-screen .my-deactivate-btn { min-height: 40px; transform: none; }
+.tourist-home-screen .room-card-copy h3 { font-size: 17px; }
+.tourist-home-screen .room-card-meta,
+.tourist-home-screen .room-card-guide { font-size: 13px; }
+.tourist-recent-screen .recent-enter-btn { min-width: 70px; min-height: 44px; }
+.photo-detail-empty {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 18px 0;
+  border: 1px solid #283029;
+  border-radius: 18px;
+  background: #101311;
+  color: #7f9487;
+  text-align: center;
+}
+.photo-detail-empty strong { color: #e7eee9; font-size: 16px; }
+.photo-detail-empty span { font-size: 12px; }
+.photo-screen .photo-actions button:disabled { opacity: .36; cursor: not-allowed; }
+
+@container mobile-shell (max-width: 360px) {
+  .tourist-profile-screen > .tourist-page-scroll { padding-inline: 16px; }
+  .tourist-profile-screen .tourist-profile-header,
+  .tourist-profile-screen .my-hero { margin-inline: -16px; }
+  .tourist-recent-screen .recent-enter-btn { min-width: 62px; }
+}
+
+/* 最近记录 V3：按状态分组，并把纪要/照片作为结束房间的明确后续操作。 */
+.tourist-recent-screen .recent-room-content { gap: 22px; }
+.tourist-recent-screen .recent-room-group { display: grid; gap: 10px; }
+.tourist-recent-screen .recent-room-group.ended-group { margin-top: 2px; }
+.tourist-recent-screen .recent-room-list { gap: 10px; padding: 0; }
+.tourist-recent-screen .recent-room-card {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+}
+.tourist-recent-screen .recent-room-card.is-ended {
+  border-color: #e1e7e2;
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 6px 18px rgba(33,71,47,.038);
+}
+.tourist-recent-screen .recent-room-main {
+  display: grid;
+  grid-template-columns: 68px minmax(0,1fr);
+  align-items: center;
+  gap: 12px;
+}
+.tourist-recent-screen .rec-room-cover-small {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+}
+.tourist-recent-screen .recent-room-info { gap: 3px; }
+.tourist-recent-screen .recent-room-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tourist-recent-screen .recent-room-name { flex: 1; min-width: 0; }
+.tourist-recent-screen .recent-status-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e4f2e9;
+  color: #197b4b;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tourist-recent-screen .recent-status-pill.ended {
+  background: #eff2ef;
+  color: #87958c;
+}
+.tourist-recent-screen .recent-room-meta { margin-bottom: 1px; }
+.tourist-recent-screen .recent-room-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #73887b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.tourist-recent-screen .recent-room-fact svg { color: #4f8d69; }
+.tourist-recent-screen .recent-room-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.tourist-recent-screen .recent-room-actions.ended-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.tourist-recent-screen .recent-room-actions button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #bad5c3;
+  border-radius: 12px;
+  background: #fff;
+  color: #26764b;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tourist-recent-screen .recent-room-actions button.primary {
+  border-color: #1f8352;
+  background: #1f8352;
+  color: #fff;
+}
+.tourist-recent-screen .recent-room-actions button:disabled { opacity: .55; }
+
+@container mobile-shell (max-width: 360px) {
+  .tourist-recent-screen .recent-room-card { gap: 10px; padding: 11px; }
+  .tourist-recent-screen .recent-room-main { grid-template-columns: 58px minmax(0,1fr); gap: 10px; }
+  .tourist-recent-screen .rec-room-cover-small { width: 58px; height: 58px; border-radius: 12px; }
+  .tourist-recent-screen .recent-room-fact { font-size: 11px; }
+  .tourist-recent-screen .recent-room-actions button { min-height: 40px; font-size: 12px; }
+}
+
+/* 讲解记录 V3：把纪要与无字幕状态做成清晰、可行动的移动端归档页。 */
+.sh-screen {
+  background:
+    radial-gradient(circle at 100% 0, rgba(207, 234, 216, .55), transparent 34%),
+    linear-gradient(180deg, #f9fbf8 0%, #f7f6f1 42%, #f7f6f1 100%);
+}
+.sh-screen .mini-header {
+  min-height: 64px;
+  padding: 0 18px;
+  background: rgba(249, 251, 248, .9);
+  backdrop-filter: blur(14px);
+}
+.sh-screen .mini-header strong {
+  color: #163a28;
+  font-size: 20px;
+  font-weight: 760;
+  letter-spacing: -.02em;
+}
+.sh-search-bar {
+  min-height: 48px;
+  margin: 10px 18px 0;
+  padding: 0 15px;
+  border-color: #d8e5dc;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(34, 71, 47, .045);
+}
+.sh-search-bar input { font-size: 13px; }
+.sh-font-row {
+  justify-content: space-between;
+  margin: 10px 18px 2px;
+}
+.sh-font-label {
+  color: #5e7869;
+  font-size: 12px;
+  font-weight: 650;
+}
+.sh-font-seg {
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid #d9e5dd;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .8);
+}
+.sh-font-seg button {
+  min-width: 42px;
+  min-height: 34px;
+  padding: 5px 11px;
+  border-radius: 9px;
+  background: transparent;
+}
+.sh-font-seg button + button { border-left: 0; }
+.sh-font-seg button.active {
+  background: #1f8352;
+  box-shadow: 0 4px 10px rgba(31, 131, 82, .18);
+}
+.sh-minutes-card {
+  margin: 12px 18px 4px;
+  padding: 18px;
+  border-color: #cfe3d6;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(208, 238, 219, .76), transparent 42%),
+    linear-gradient(145deg, #ffffff 0%, #f0f8f2 100%);
+  box-shadow: 0 12px 30px rgba(34, 71, 47, .075);
+}
+.sh-minutes-card.is-empty {
+  border-color: #dae5de;
+  background:
+    radial-gradient(circle at 100% 0, rgba(227, 238, 230, .8), transparent 44%),
+    linear-gradient(145deg, #ffffff 0%, #f4f7f4 100%);
+}
+.sh-minutes-head {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.sh-minutes-heading-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #dff1e5;
+  color: #1d7e4d;
+}
+.sh-minutes-card.is-empty .sh-minutes-heading-icon {
+  background: #edf2ee;
+  color: #688276;
+}
+.sh-minutes-heading-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sh-minutes-heading-copy > span {
+  color: #1b4a31;
+  font-size: 13px;
+  font-weight: 750;
+}
+.sh-minutes-heading-copy small {
+  color: #82978a;
+  font-size: 10px;
+}
+.sh-minutes-status {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #dff1e5;
+  color: #1d7e4d;
+  font-size: 10px;
+  font-weight: 700;
+}
+.sh-minutes-status.pending {
+  background: #eef2ef;
+  color: #71847a;
+}
+.sh-minutes-room {
+  margin: 16px 0 5px !important;
+  color: #759083 !important;
+  font-size: 10px !important;
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+.sh-minutes-card h2 {
+  margin: 0 0 7px;
+  color: #173a29;
+  font-size: 18px;
+  font-weight: 760;
+  line-height: 1.4;
+}
+.sh-minutes-card > p:not(.sh-minutes-room) {
+  color: #63796d;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.sh-minutes-keywords { margin-top: 12px; gap: 6px; }
+.sh-minutes-keywords span { padding: 5px 9px; font-size: 10px; }
+.sh-minutes-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+.sh-minutes-page-body .sh-minutes-card { margin-top: 12px; }
+.sh-minutes-loading {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: #7d9185;
+  font-size: 12px;
+}
+.sh-minutes-points {
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(126, 157, 138, .22);
+}
+.sh-minutes-points h3 {
+  margin: 0 0 10px;
+  color: #2b4d3a;
+  font-size: 12px;
+  font-weight: 750;
+}
+.sh-minutes-points ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sh-minutes-points li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+.sh-minutes-points li > span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #dff0e4;
+  color: #24784b;
+  font-size: 10px;
+  font-weight: 750;
+}
+.sh-minutes-points li p {
+  margin: 2px 0 0;
+  color: #526b5d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sh-minutes-message {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 12px 18px 0;
+  padding: 28px 22px;
+  border: 1px solid #dfe8e2;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .78);
+  text-align: center;
+}
+.sh-minutes-message-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 13px;
+  border-radius: 17px;
+  background: #e8f3eb;
+  color: #2b8052;
+}
+.sh-minutes-message strong { color: #254635; font-size: 16px; }
+.sh-minutes-message p { max-width: 260px; margin: 7px 0 0; color: #7a8e82; font-size: 12px; line-height: 1.65; }
+.sh-minutes-message button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 17px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #1f8352;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sh-list {
+  padding: 12px 18px 18px;
+  gap: 12px;
+}
+.sh-empty-state {
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 22px;
+  border: 1px solid #e0e8e2;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .76);
+  box-shadow: 0 10px 28px rgba(34, 71, 47, .045);
+  text-align: center;
+}
+.sh-empty-state-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  background: #e8f3eb;
+  color: #2b8052;
+}
+.sh-empty-state strong {
+  color: #244534;
+  font-size: 16px;
+  font-weight: 750;
+}
+.sh-empty-state p {
+  max-width: 280px;
+  margin: 7px 0 0;
+  color: #7c8f84;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.sh-empty-state-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 20px;
+}
+.sh-empty-state-actions button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #c7d9cd;
+  border-radius: 13px;
+  background: #fff;
+  color: #397052;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sh-empty-state-actions button.primary {
+  border-color: #1f8352;
+  background: #1f8352;
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(31, 131, 82, .18);
+}
+
+@container mobile-shell (max-width: 360px) {
+  .sh-screen .mini-header { min-height: 58px; padding-inline: 14px; }
+  .sh-search-bar,
+  .sh-font-row,
+  .sh-minutes-card { margin-inline: 14px; }
+  .sh-list { padding-inline: 14px; }
+  .sh-minutes-card { padding: 15px; border-radius: 19px; }
+  .sh-minutes-card h2 { font-size: 16px; }
+  .sh-empty-state { min-height: 210px; padding: 24px 16px; border-radius: 19px; }
+  .sh-empty-state-actions { grid-template-columns: 1fr; }
+}
+
+/* 创建成功页定向修正：封面只展示房间背景，移除扫码区域。 */
+.success-screen .success-intro {
+  width: 100%;
+  margin: 0 auto 18px;
+  padding: 2px 8px 0;
+  text-align: center;
+}
+.success-screen .success-intro .success-mark-wrap { margin: 0; }
+.success-screen .success-intro h2 {
+  margin: 8px 0 8px;
+  color: var(--guide-ink, #153d2b);
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+.success-screen .success-intro p {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  color: var(--guide-muted, #71877a);
+  font-size: 13px;
+  line-height: 1.65;
+  text-align: center;
+  text-wrap: balance;
+}
+.success-screen .success-room-cover-wrap {
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  background: #e5eee8;
+}
+.success-screen .success-room-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.success-screen .success-secret { padding-bottom: 8px !important; }
+.success-screen .success-secret > p:last-child { border-bottom: 0; }
+
+@container mobile-shell (max-width: 360px) {
+  .success-screen .success-intro { padding-inline: 0; }
+  .success-screen .success-intro h2 { font-size: 20px; }
+  .success-screen .success-intro p { font-size: 12px; }
+}
+
+/* 导游记录页：移除低价值统计宫格，以轻量归档列表承载状态与后续动作。 */
+.rec-page .rec-page-scroll { padding-top: 8px; }
+.rec-page .rec-page-hero {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -8px -20px 18px;
+  padding: 26px 22px 24px;
+  border-radius: 0 0 28px 28px;
+  background: #e4f2e8;
+  box-shadow: 0 14px 28px rgba(35, 91, 57, .08);
+}
+.rec-page .rec-page-hero > div { min-width: 0; }
+.rec-page .rec-page-hero > div > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #3f7458;
+  font-size: 13px;
+  font-weight: 750;
+}
+.rec-page .rec-page-hero h1 {
+  margin: 0;
+  color: #153a28;
+  font-size: 28px;
+  font-weight: 820;
+  line-height: 1.18;
+  letter-spacing: -.02em;
+}
+.rec-page .rec-page-hero p {
+  max-width: 245px;
+  margin: 9px 0 0;
+  color: #5d7568;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.rec-page .rec-page-hero > svg {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  padding: 14px;
+  border: 1px solid rgba(42, 119, 73, .13);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .72);
+  color: #1f8250;
+}
+.rec-page .rec-filter-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  gap: 4px;
+  margin: 0 0 18px;
+  padding: 4px;
+  border: 1px solid #dce7df;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 8px 22px rgba(36, 77, 53, .05);
+  backdrop-filter: blur(12px);
+}
+.rec-page .rec-filter-tab {
+  min-height: 40px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #718579;
+  font-size: 13px;
+  font-weight: 650;
+}
+.rec-page .rec-filter-tab.active {
+  background: #1f8250;
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(31, 130, 80, .16);
+}
+.rec-page .rec-room-card {
+  position: relative;
+  display: block;
+  margin: 0 0 12px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #d9e5dd;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(34, 70, 46, .07);
+}
+.rec-page .rec-room-cover {
+  width: 100%;
+  height: 156px;
+  border-radius: 0;
+  background: #eef5f0;
+  box-shadow: none;
+}
+.rec-page .rec-room-cover img { object-position: center 48%; }
+.rec-page .rec-room-body {
+  gap: 6px;
+  padding: 14px;
+}
+.rec-page .rec-room-top { min-height: 24px; align-items: flex-start; }
+.rec-page .rec-room-name {
+  padding-top: 1px;
+  color: #193226;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+.rec-page .rec-badge {
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: .01em;
+}
+.rec-page .rec-badge.live {
+  border-color: #cae7d5;
+  background: #eaf7ef;
+  color: #197848;
+}
+.rec-page .rec-badge.pending {
+  border-color: #f3dfbd;
+  background: #fff7e9;
+  color: #bd680d;
+}
+.rec-page .rec-badge.ended {
+  border-color: #e0e8e3;
+  background: #f3f6f4;
+  color: #75887e;
+}
+.rec-page .rec-room-number {
+  display: block;
+  color: #7b8e83;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.rec-page .rec-room-summary {
+  margin: 1px 0 2px;
+  color: #63796d;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.rec-page .rec-room-meta {
+  gap: 5px 10px;
+  padding: 1px 0 3px;
+}
+.rec-page .rec-room-meta span {
+  gap: 4px;
+  color: #6e8176;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.rec-page .rec-room-action {
+  width: 100%;
+  min-height: 42px;
+  margin: 4px 0 0;
+  padding: 0 14px;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #d7e4dc;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #315e47;
+  font-size: 12px;
+  font-weight: 700;
+}
+.rec-page .rec-room-action.pending-start {
+  border-color: #f0dcb9;
+  background: #fff9ef;
+  color: #b86612;
+}
+.rec-page .rec-room-action.live {
+  border-color: #cfe5d7;
+  background: #f1f9f4;
+  color: #1f7f4e;
+}
+.rec-page .rec-room-action.ended {
+  border-color: #d9e5dd;
+  background: #f7faf8;
+  color: #4d6859;
+}
+.rec-page .rec-room-action svg:last-child { margin-left: 1px; }
+
+@container mobile-shell (max-width: 360px) {
+  .rec-page .rec-page-hero {
+    min-height: 142px;
+    margin-inline: -14px;
+    padding: 24px 16px 22px;
+  }
+  .rec-page .rec-page-hero h1 { font-size: 25px; }
+  .rec-page .rec-page-hero p { max-width: 205px; font-size: 12px; }
+  .rec-page .rec-page-hero > svg {
+    width: 52px;
+    height: 52px;
+    padding: 13px;
+    border-radius: 16px;
+  }
+  .rec-page .rec-room-card {
+    padding: 0;
+  }
+  .rec-page .rec-room-cover { width: 100%; height: 132px; border-radius: 0; }
+  .rec-page .rec-room-body { padding: 12px; }
+  .rec-page .rec-room-name { font-size: 15px; }
+  .rec-page .rec-badge { padding-inline: 7px; }
+  .rec-page .rec-room-action { min-height: 40px; padding-inline: 10px; }
+  .rec-page .rec-room-meta { gap: 5px 8px; }
+}
+
+/* 导游首页当前房间与历史入口：建立“区块语义 → 标题 → 说明 → 状态/操作”的层级。 */
+.guide-home-screen .guide-current-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 13px 14px;
+  border: 1px solid #dce9e0;
+  border-radius: 16px;
+  background: #f5faf6;
+}
+.guide-home-screen .guide-current-heading-copy {
+  min-width: 0;
+}
+.guide-home-screen .guide-current-heading-copy > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #6c8778;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.guide-home-screen .guide-current-heading-copy h3 {
+  margin: 0;
+  color: #183729;
+  font-size: 17px;
+  font-weight: 760;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+}
+.guide-home-screen .guide-current-heading-copy p {
+  margin: 5px 0 0;
+  color: #708378;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.guide-home-screen .guide-room-state {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.guide-home-screen .guide-room-state svg { width: 12px; height: 12px; }
+.guide-home-screen .guide-room-state.is-live {
+  border-color: #cae7d5;
+  background: #eaf7ef;
+  color: #197848;
+}
+.guide-home-screen .guide-room-state.is-pending {
+  border-color: #f1d9af;
+  background: #fff6e7;
+  color: #b96410;
+}
+.guide-home-screen .guide-room-state.is-checking {
+  border-color: #dfe7e2;
+  background: #f2f5f3;
+  color: #718078;
+}
+.guide-home-screen .guide-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 26px 2px 12px;
+}
+.guide-home-screen .guide-history-heading > div { min-width: 0; }
+.guide-home-screen .guide-history-heading h3 {
+  margin: 0;
+  color: #183729;
+  font-size: 20px;
+  font-weight: 760;
+  line-height: 1.3;
+  letter-spacing: -.015em;
+}
+.guide-home-screen .guide-history-heading p {
+  margin: 4px 0 0;
+  color: #718479;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.guide-home-screen .guide-history-heading .all-records-btn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d4e4da;
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  color: #2b7750;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 5px 14px rgba(39, 91, 58, .045);
+}
+
+@container mobile-shell (max-width: 360px) {
+  .guide-home-screen .guide-current-heading { padding: 12px; }
+  .guide-home-screen .guide-current-heading-copy h3 { font-size: 16px; }
+  .guide-home-screen .guide-current-heading-copy p { max-width: 168px; }
+  .guide-home-screen .guide-room-state { padding-inline: 8px; }
+  .guide-home-screen .guide-history-heading h3 { font-size: 18px; }
+  .guide-home-screen .guide-history-heading p { max-width: 180px; }
+  .guide-home-screen .guide-history-heading .all-records-btn { padding-inline: 10px; }
+}
+
+/* 三端“我的”页：头像不再压在整块绿色底板上，账号信息统一使用卡片外分组标题。 */
+:is(.guide-my-screen, .photographer-my-screen, .tourist-profile-screen) .my-hero {
+  min-height: 0;
+  margin: 0 0 18px;
+  padding: 20px 0 22px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+}
+:is(.guide-my-screen, .photographer-my-screen, .tourist-profile-screen) .my-avatar {
+  box-shadow: 0 8px 24px rgba(34, 77, 52, .12);
+}
+.guide-my-screen .my-avatar-wrap,
+.guide-my-screen .my-avatar {
+  width: 74px;
+  height: 74px;
+}
+.guide-my-screen .my-avatar-wrap { margin-bottom: 2px; }
+.guide-my-screen .my-name {
+  margin-top: 0;
+  font-size: 21px;
+  line-height: 1.2;
+}
+.guide-my-screen .my-role-tag {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+:is(.guide-my-screen, .photographer-my-screen, .tourist-profile-screen) .my-account-section {
+  margin: 0 0 16px;
+}
+:is(.guide-my-screen, .photographer-my-screen) .my-account-title,
+.tourist-profile-screen .tourist-account-label {
+  margin: 0 0 8px 4px;
+  color: #6d8477;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:is(.guide-my-screen, .photographer-my-screen) .my-account-card {
+  margin: 0;
+  padding: 4px 16px;
+  border-radius: 20px;
+}
+:is(.guide-my-screen, .photographer-my-screen) .my-account-card .my-info-row,
+.tourist-profile-screen .tourist-account-card .my-info-row {
+  min-height: 48px;
+  padding: 10px 0;
+}
+:is(.guide-my-screen, .photographer-my-screen) .my-account-card .my-info-label,
+.tourist-profile-screen .tourist-account-card .my-info-label {
+  font-size: 14px;
+}
+:is(.guide-my-screen, .photographer-my-screen) .my-account-card .my-info-value,
+.tourist-profile-screen .tourist-account-card .my-info-value {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@container mobile-shell (max-width: 360px) {
+  :is(.guide-my-screen, .photographer-my-screen, .tourist-profile-screen) .my-hero {
+    margin-inline: 0;
+    padding-block: 16px 20px;
+  }
+}

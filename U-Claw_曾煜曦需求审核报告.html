@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>U-Claw · 曾煜曦需求审核报告</title>
+  <!--
+    Assumptions:
+    1) 本报告是立项前技术审查，不代表实机 PoC 已通过。
+    2) “需提交”区分文档明确点名与为完成签字所必需的补充证据。
+    3) 所有 OpenClaw 事实以 2026-08-08 官方文档为基线；版本锁定后仍须在母盘实测。
+    4) 视觉母题来自“审查台账”：结论、证据、责任人、决策门逐层落章。
+    5) 未提供公司品牌规范，采用克制的工程审查风格，不使用装饰图片。
+  -->
+  <style>
+    :root{
+      --paper:#f4f1e9; --panel:#fffdf8; --ink:#172126; --muted:#627078;
+      --line:#d7d3c8; --navy:#173b4d; --teal:#087f73; --green:#18794e;
+      --amber:#a05a00; --red:#b42318; --soft-green:#e8f5ee; --soft-amber:#fff4dc;
+      --soft-red:#fdecea; --soft-blue:#eaf1f4; --shadow:0 12px 34px rgba(23,33,38,.08);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    a{color:var(--navy);text-underline-offset:3px}
+    button,input{font:inherit}
+    .shell{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1580px;margin:auto;min-height:100vh}
+    aside{position:sticky;top:0;height:100vh;padding:34px 24px;border-right:1px solid var(--line);background:#ece8de}
+    .eyebrow{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+    .brand{margin:8px 0 3px;font:700 29px/1.12 "Songti SC","STSong",serif;letter-spacing:-.02em}
+    .sub{color:var(--muted);font-size:12px}
+    nav{margin-top:30px;display:grid;gap:4px}
+    nav a{display:block;padding:8px 10px;border-radius:3px;color:#405058;text-decoration:none;font-size:13px}
+    nav a:hover{background:rgba(255,255,255,.65);color:var(--ink)}
+    .legend{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);display:grid;gap:8px;font-size:12px;color:#52616a}
+    .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+    main{padding:44px clamp(24px,5vw,76px) 80px;min-width:0}
+    .hero{border-top:6px solid var(--navy);padding:34px 0 28px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(270px,.7fr);gap:42px;align-items:end}
+    h1{margin:6px 0 16px;font:700 clamp(38px,5vw,70px)/1.02 "Songti SC","STSong",serif;letter-spacing:-.045em;max-width:900px}
+    .lead{max-width:820px;font-size:18px;color:#46545b}
+    .verdict{background:var(--navy);color:white;padding:24px;box-shadow:var(--shadow)}
+    .verdict strong{display:block;font:700 27px/1.2 "Songti SC","STSong",serif;margin:7px 0 10px}
+    .verdict p{margin:0;color:#d8e5e8;font-size:13px}
+    .meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:20px;color:var(--muted);font-size:12px}
+    section{scroll-margin-top:24px;margin-top:68px}
+    .section-head{display:flex;justify-content:space-between;gap:24px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:13px;margin-bottom:20px}
+    .section-head h2{margin:0;font:700 clamp(28px,3vw,42px)/1.1 "Songti SC","STSong",serif;letter-spacing:-.025em}
+    .section-head p{margin:0;max-width:580px;text-align:right;color:var(--muted);font-size:13px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow)}
+    .stat{padding:23px;border-right:1px solid var(--line)} .stat:last-child{border-right:0}
+    .stat b{display:block;font:700 35px/1 "Songti SC","STSong",serif;margin-bottom:8px}
+    .stat span{color:var(--muted);font-size:12px}
+    .callout{margin:22px 0;padding:18px 20px;border-left:5px solid var(--amber);background:var(--soft-amber)}
+    .callout strong{color:#6d3d00}
+    .decision-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .decision{padding:20px;border:1px solid var(--line);background:var(--panel)}
+    .decision .num{font:700 12px/1 monospace;color:var(--teal);letter-spacing:.1em}
+    .decision h3{margin:10px 0 7px;font-size:17px;line-height:1.35}
+    .decision p{margin:0;color:var(--muted);font-size:13px}
+    .filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+    .filters button{border:1px solid var(--line);background:var(--panel);color:#49575e;padding:7px 12px;cursor:pointer;border-radius:999px;font-size:12px}
+    .filters button.active{background:var(--ink);color:white;border-color:var(--ink)}
+    .table-wrap{overflow:auto;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow)}
+    table{width:100%;border-collapse:collapse;min-width:940px}
+    th{background:#ece8de;text-align:left;padding:12px 14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#526068;position:sticky;top:0;z-index:1}
+    td{padding:14px;border-top:1px solid var(--line);vertical-align:top;font-size:13px}
+    tr:hover td{background:#fffaf0}
+    .status{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-weight:700;font-size:12px}
+    .status::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+    .ok{color:var(--green)} .risk{color:var(--amber)} .no{color:var(--red)} .unknown{color:#526e7a}
+    .tag{display:inline-block;margin:2px 4px 2px 0;padding:2px 7px;border:1px solid var(--line);font-size:11px;border-radius:999px;color:#536169;background:#faf8f2}
+    .accept{font-weight:800}.accept.yes{color:var(--green)}.accept.conditional{color:var(--amber)}.accept.no{color:var(--red)}
+    .submit-list{display:grid;gap:10px}
+    .submit-item{display:grid;grid-template-columns:34px 96px minmax(210px,1.1fr) minmax(260px,1.4fr) 120px;gap:14px;align-items:start;padding:16px;border-bottom:1px solid var(--line);background:var(--panel)}
+    .submit-item input{width:18px;height:18px;accent-color:var(--teal);margin-top:3px}
+    .priority{font:800 11px/1.4 monospace;letter-spacing:.06em}.priority.p0{color:var(--red)}.priority.p1{color:var(--amber)}.priority.p2{color:var(--teal)}
+    .submit-item h3{margin:0;font-size:15px;line-height:1.4}.submit-item p{margin:2px 0 0;color:var(--muted);font-size:12px}
+    .deadline{font-size:12px;font-weight:700;color:#4b5a61}
+    .matrix td:nth-child(1){width:6%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#617078}
+    .matrix td:nth-child(2){width:20%;font-weight:700}
+    .matrix td:nth-child(3){width:12%}
+    .matrix td:nth-child(4){width:24%}
+    .matrix td:nth-child(5){width:26%}
+    .matrix td:nth-child(6){width:12%}
+    .risk-list{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .risk-card{border:1px solid var(--line);background:var(--panel);padding:20px;position:relative}
+    .risk-card::before{content:attr(data-level);position:absolute;right:16px;top:16px;font:800 11px monospace;color:var(--red)}
+    .risk-card h3{margin:0 70px 8px 0;font-size:17px}.risk-card p{margin:5px 0;color:var(--muted);font-size:13px}
+    .gate{display:grid;grid-template-columns:110px 1fr 1fr;gap:0;border:1px solid var(--line);background:var(--panel)}
+    .gate>div{padding:16px;border-bottom:1px solid var(--line)}.gate>div:nth-last-child(-n+3){border-bottom:0}
+    .gate .week{font:700 16px "Songti SC","STSong",serif;background:#ece8de}
+    .gate strong{display:block;margin-bottom:4px}.gate span{color:var(--muted);font-size:12px}
+    .source-list{columns:2;column-gap:40px}.source{break-inside:avoid;margin-bottom:14px;font-size:13px;color:#526068}.source b{display:block;color:var(--ink)}
+    footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+    .print-btn{position:fixed;right:22px;bottom:22px;border:0;background:var(--ink);color:white;padding:12px 16px;box-shadow:var(--shadow);cursor:pointer}
+    @media(max-width:1050px){.shell{grid-template-columns:1fr}aside{display:none}.hero{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}.decision-grid{grid-template-columns:1fr 1fr}.submit-item{grid-template-columns:30px 80px 1fr}.submit-item .evidence{grid-column:3}.deadline{grid-column:3}.risk-list{grid-template-columns:1fr}}
+    @media(max-width:650px){main{padding:24px 16px 60px}.decision-grid,.stats{grid-template-columns:1fr}.stat{border-right:0;border-bottom:1px solid var(--line)}.section-head{display:block}.section-head p{text-align:left;margin-top:8px}.gate{grid-template-columns:80px 1fr}.gate .proof{grid-column:2}.source-list{columns:1}.submit-item{display:block;position:relative;padding:16px 16px 16px 50px}.submit-item input{position:absolute;left:16px;top:17px}.submit-item .priority,.submit-item .evidence,.submit-item .deadline{display:block;margin-top:8px}.submit-item .deadline{padding-top:8px;border-top:1px dashed var(--line)}.print-btn{display:none}}
+    @media print{body{background:white;font-size:11px}.shell{display:block}.print-btn,aside,.filters{display:none}main{padding:0}.hero{padding-top:16px}.verdict,.table-wrap,.stats{box-shadow:none}section{break-before:page;margin-top:24px}.hero+section{break-before:auto}.table-wrap{overflow:visible}table{min-width:0}th{position:static}.risk-card,.decision,.submit-item,tr{break-inside:avoid}a{color:inherit;text-decoration:none}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <div class="eyebrow">Technical Due Diligence</div>
+    <div class="brand">U-Claw 审查台账</div>
+    <div class="sub">评审对象：曾煜曦 · 2026-08-08</div>
+    <nav>
+      <a href="#conclusion">01 · 总体结论</a>
+      <a href="#submit">02 · 您需提交</a>
+      <a href="#decisions">03 · 先拍板事项</a>
+      <a href="#matrix">04 · 全需求裁决</a>
+      <a href="#conflicts">05 · 矛盾与不清楚</a>
+      <a href="#risks">06 · 风险接受判断</a>
+      <a href="#gates">07 · 周计划签字门</a>
+      <a href="#sources">08 · 依据与边界</a>
+    </nav>
+    <div class="legend">
+      <div><span class="dot" style="background:var(--green)"></span>可行，可直接接受</div>
+      <div><span class="dot" style="background:var(--amber)"></span>有条件可行</div>
+      <div><span class="dot" style="background:var(--red)"></span>不可按原文接受</div>
+      <div><span class="dot" style="background:#526e7a"></span>证据不足，暂不签字</div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <div>
+        <div class="eyebrow">立项前技术审核 · 决策版</div>
+        <h1>能做，但不能按原稿直接写死</h1>
+        <div class="lead">V2「Windows 半便携运行盘」具备样品可行性；当前文本把若干未验证接口、过强安全承诺和相互冲突的存储方案混在一起。建议先完成 6 个决策门与干净机 PoC，再锁排期和成本。</div>
+        <div class="meta"><span>审核人视角：曾煜曦（共同技术执行）</span><span>材料：3 份 PDF + 群聊截图</span><span>事实基线：OpenClaw 官方文档 2026-08-08</span></div>
+      </div>
+      <div class="verdict">
+        <div class="eyebrow" style="color:#8fd7ce">最终建议</div>
+        <strong>有条件立项</strong>
+        <p>接受 V2 样品目标；不接受“绝对盘外隔离、明文密钥随盘、整库直接克隆、推演 API 作为定案、断电零丢失”五项原始表述。</p>
+      </div>
+    </header>
+
+    <section id="conclusion">
+      <div class="section-head"><h2>总体结论</h2><p>结论针对“能否进入样品开发”，不是对量产、商业化或跨平台的背书。</p></div>
+      <div class="stats">
+        <div class="stat"><b>5</b><span>可直接接受的要求</span></div>
+        <div class="stat"><b>12</b><span>修改后可接受</span></div>
+        <div class="stat"><b>6</b><span>不可按原文接受</span></div>
+        <div class="stat"><b>3</b><span>证据不足，暂不签字</span></div>
+      </div>
+      <div class="callout"><strong>签字口径：</strong>“本人同意进入第 2-3 周 PoC；排期与成本仅在 P0 决策项关闭、干净机证据通过后生效。未验证 API、存储结构和安全隔离不得写入对外承诺。”</div>
+      <div class="decision-grid">
+        <article class="decision"><div class="num">KEEP / 01</div><h3>保留 V2 Windows 样品方向</h3><p>官方支持原生 Windows，便携 Node + 定向 state/workspace 路径具备验证价值。</p></article>
+        <article class="decision"><div class="num">CHANGE / 02</div><h3>从“整盘克隆”改为“净化模板物化”</h3><p>只克隆预置配置与知识资产，不克隆 auth、session、测试记录和用户密钥。</p></article>
+        <article class="decision"><div class="num">CHANGE / 03</div><h3>密钥默认不随盘保存</h3><p>安全默认应为每次输入；若产品坚持保存，增加用户口令加密且口令不得落盘。</p></article>
+        <article class="decision"><div class="num">REJECT / 04</div><h3>不改 OpenClaw 核心为双数据库</h3><p>当前官方状态由 workspace、agentDir、sessions、SQLite 等组成；核心改造超出 5 周样品边界。</p></article>
+        <article class="decision"><div class="num">REJECT / 05</div><h3>不承诺“盘外绝对不可访问”</h3><p>workspace 不是硬沙箱；无 Docker/WSL2 条件下，只能做工具最小化与“默认不访问”的降级承诺。</p></article>
+        <article class="decision"><div class="num">GATE / 06</div><h3>第 3 周 PoC 决定 V2 / V1</h3><p>干净机、盘符变化、普通权限、杀软、拔插恢复五类证据必须留档。</p></article>
+      </div>
+    </section>
+
+    <section id="submit">
+      <div class="section-head"><h2>曾煜曦需要提交什么</h2><p>前 7 项是本周签字包；其余为开发阶段证据。勾选状态会保存在当前浏览器。</p></div>
+      <div class="submit-list" id="submitList">
+        <div class="submit-item"><input type="checkbox" data-key="s1"><div class="priority p0">P0 · 明确点名</div><div><h3>逐周技术评审回复</h3><p>第 2-6 周逐项写“可行 / 有风险 / 不可行”，不能只回复“无异议”。</p></div><div class="evidence"><b>交付物：</b>填写《技术实施方案》第 11 章；风险项附前置条件、降级触发器和排期影响。</div><div class="deadline">本周内</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s2"><div class="priority p0">P0 · 明确点名</div><div><h3>干净机 PoC 可行性判断与测试计划</h3><p>先提交判断，实际证据在第 3 周形成。</p></div><div class="evidence"><b>至少包含：</b>Win11 主测版本、Win10 仅兼容测试、无 Node/Git/Docker、普通权限、盘符变化、杀软、离线/断网、异常拔盘。</div><div class="deadline">判断本周；证据第 3 周</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s3"><div class="priority p0">P0 · 明确点名</div><div><h3>许可证与分发合规清单</h3><p>OpenClaw 主仓库 MIT 不等于整盘资产自动可商用。</p></div><div class="evidence"><b>交付物：</b>MIT LICENSE、THIRD_PARTY_NOTICES、Node/依赖许可证、6 套知识库文档与头像/字体来源清单。</div><div class="deadline">本周内</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s4"><div class="priority p0">P0 · 明确点名</div><div><h3>当前版本状态与存储映射</h3><p>替代“单 openclaw.db / data 整体覆盖”的模糊假设。</p></div><div class="evidence"><b>交付物：</b>列出 config、stateDir、workspace、agents/&lt;id&gt;/agent、session store、日志、知识资产的真实路径与是否可克隆。</div><div class="deadline">本周内</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s5"><div class="priority p0">P0 · 明确点名</div><div><h3>SSD 询价截图</h3><p>128GB × 2-3 块，预算总额不超过 800 元。</p></div><div class="evidence"><b>建议附加：</b>型号、主控/颗粒信息、保修、连续与 4K 随机性能、是否支持 TRIM/UASP，不只提交价格。</div><div class="deadline">本周内</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s6"><div class="priority p0">P0 · 补充必需</div><div><h3>密钥保存方案决策单</h3><p>“Key 随盘”与“密钥不好保存、容易泄露”存在直接冲突。</p></div><div class="evidence"><b>推荐：</b>默认不记住；可选口令加密。必须由产品负责人签字接受体验降级，不由研发默默决定。</div><div class="deadline">锁需求前</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s7"><div class="priority p0">P0 · 补充必需</div><div><h3>前端人力与改造边界估算</h3><p>设置页、认证、配置重载、品牌栏、使用说明并非“植入一段 HTML”。</p></div><div class="evidence"><b>交付物：</b>工作量拆分、是否独立 launcher/helper、OpenClaw 升级冲突策略；给出“二人兼任”是否接受。</div><div class="deadline">本周内</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s8"><div class="priority p1">P1 · 第 2 周</div><div><h3>版本与文件系统定版记录</h3><p>锁 OpenClaw commit/package、Node 精确版本、依赖锁文件与 NTFS 结论。</p></div><div class="evidence"><b>证据：</b>版本清单、hash、SBOM、启动日志；V2 Windows 样品推荐 NTFS，Mac 另镜像/另分区。</div><div class="deadline">第 2 周末</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s9"><div class="priority p1">P1 · 第 3 周</div><div><h3>PoC 证据包与 V2/V1 决策</h3><p>不能只有演示视频。</p></div><div class="evidence"><b>证据：</b>机器/系统版本、启动耗时、进程与端口、ProcMon 盘外写入、杀软结果、异常拔盘恢复、失败日志、是否触发 V1。</div><div class="deadline">第 3 周末</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s10"><div class="priority p1">P1 · 第 4 周</div><div><h3>初始化设置安全验收</h3><p>验证 provider-specific Key、配置位置、认证、重启/热加载和错误提示。</p></div><div class="evidence"><b>证据：</b>loopback + token、Origin/CSRF、防日志泄密、配置文件 ACL、三家 provider 实测；禁止沿用推演的 `/api/v1/init/config`。</div><div class="deadline">第 4 周末</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s11"><div class="priority p1">P1 · 第 5 周</div><div><h3>Agent 模板净化清单</h3><p>证明预置内容中没有测试用户、OAuth、API Key、会话、日志或机器标识。</p></div><div class="evidence"><b>交付物：</b>6 Agent manifest、workspace 文件、头像/知识库许可、工具 allow/deny、安全审计报告、恢复出厂测试。</div><div class="deadline">第 5 周末</div></div>
+        <div class="submit-item"><input type="checkbox" data-key="s12"><div class="priority p2">P2 · 第 6 周</div><div><h3>母盘与克隆盘验收包</h3><p>一份可复现的交付，而非手工口头说明。</p></div><div class="evidence"><b>交付物：</b>母盘 hash、克隆 SOP、差异扫描、三机验证、备份/回滚、已知限制、用户手册与签字记录。</div><div class="deadline">第 6 周末</div></div>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <div class="section-head"><h2>签字前必须拍板</h2><p>这些不是编码细节，而是会改变安全、体验、成本或宣传口径的产品决策。</p></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>决策</th><th>推荐结论</th><th>不拍板的后果</th><th>拍板人</th></tr></thead>
+        <tbody>
+          <tr><td>01</td><td><b>API Key 是否随盘保存</b></td><td>默认不保存；可选用户口令加密，口令不落盘。</td><td>若明文保存，丢盘即泄密；若用 DPAPI，则换机不可用。</td><td>产品 + 安全 + 院方</td></tr>
+          <tr><td>02</td><td><b>“盘外不可访问”的真实口径</b></td><td>改为“默认不主动访问盘外；危险工具关闭；不作硬隔离承诺”。</td><td>原文无法在无 Docker/WSL2 的原生 Windows 方案中证明。</td><td>产品 + 法务</td></tr>
+          <tr><td>03</td><td><b>最终启动器</b></td><td>.bat 仅用于 PoC；样品交付改为 Rust/原生 launcher，展示错误与安全关闭。</td><td>杀软误报、黑窗体验和异常拔盘风险不可控。</td><td>技术 + 统筹</td></tr>
+          <tr><td>04</td><td><b>Windows 支持矩阵</b></td><td>Windows 11 为正式目标；Win10 22H2 仅兼容性验证并标注已停止支持。</td><td>2026 年继续无条件承诺 Win10 会形成安全与售后负担。</td><td>产品 + 对外接口</td></tr>
+          <tr><td>05</td><td><b>三项增强功能选哪两项</b></td><td>选择“备份迁移 + 更新回滚”；联网研究放二期。</td><td>“至少两项”不点名，排期与验收均无法锁定。</td><td>功能规划</td></tr>
+          <tr><td>06</td><td><b>Agent 知识库责任边界</b></td><td>法务/财务/健康均加非专业建议声明、资料版本日期、来源与更新责任人。</td><td>内容过期或错误会直接转化为业务与合规风险。</td><td>功能 + 法务/内容负责人</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="matrix">
+      <div class="section-head"><h2>全需求裁决矩阵</h2><p>“可接受”指修订后的项目承诺是否可以进入样品期；不是技术上“理论上能写出来”。</p></div>
+      <div class="filters" role="group" aria-label="筛选裁决"><button class="active" data-filter="all">全部 26 项</button><button data-filter="ok">✓ 可行</button><button data-filter="risk">△ 有条件</button><button data-filter="no">× 不接受原文</button><button data-filter="unknown">? 待验证</button></div>
+      <div class="table-wrap"><table class="matrix" id="matrixTable">
+        <thead><tr><th>#</th><th>需求 / 原表述</th><th>裁决</th><th>判断依据</th><th>最优降级方案</th><th>能否接受</th></tr></thead>
+        <tbody>
+          <tr data-status="risk"><td>R01</td><td>盘内便携 Node + OpenClaw，免安装、免管理员</td><td><span class="status risk">有条件可行</span></td><td>官方支持原生 Windows，但当前版本有精确 Node 下限并可能含安装脚本/原生依赖；必须锁版本实测。</td><td>固定 Node/OpenClaw/lockfile，禁止在线升级；第 3 周不通即 V1 安装盘。</td><td class="accept conditional">可接受 · 过 PoC</td></tr>
+          <tr data-status="risk"><td>R02</td><td>Win10 / Win11 都作为样品硬标准</td><td><span class="status risk">范围需收窄</span></td><td>Win10 Home/Pro 已于 2025-10-14 停止支持。</td><td>Windows 11 正式支持；Win10 22H2 仅 best-effort 兼容测试，写明安全限制。</td><td class="accept conditional">修改后接受</td></tr>
+          <tr data-status="ok"><td>R03</td><td>盘符变化仍可启动</td><td><span class="status ok">可行</span></td><td>launcher 根据自身路径解析根目录，配合官方 state/config/workspace 路径变量。</td><td>禁止持久化绝对盘符；测试 E:/F:/G: 与含空格路径。</td><td class="accept yes">接受</td></tr>
+          <tr data-status="risk"><td>R04</td><td>配置、会话、记忆、文件全部留盘</td><td><span class="status risk">有条件可行</span></td><td>需同时迁移 stateDir、config、workspace、每 Agent 的 agentDir/session store；单设 HOME 不等于全覆盖。</td><td>建立真实路径清单，以 ProcMon + 文件差异扫描证明；允许系统临时文件例外并披露。</td><td class="accept conditional">证据后接受</td></tr>
+          <tr data-status="no"><td>R05</td><td>盘外文件默认碰不到 / 绝对隔离</td><td><span class="status no">原文不可行</span></td><td>官方明确 workspace 是 cwd，不是硬沙箱；绝对路径仍可访问宿主机。</td><td>关闭 exec/browser/危险 fs，启用 workspaceOnly 与最小工具策略；宣传改“默认不主动访问”。</td><td class="accept conditional">仅降级口径可接受</td></tr>
+          <tr data-status="no"><td>R06</td><td>API Key 明文随盘、换机继续使用</td><td><span class="status no">安全上不可接受</span></td><td>丢盘即丢密钥；DPAPI 与机器绑定，又违背换机；“加密但密钥也在盘上”没有实质保护。</td><td>默认每次输入；可选用户口令加密（Argon2id + AEAD），口令不落盘。</td><td class="accept conditional">体验降级后接受</td></tr>
+          <tr data-status="no"><td>R07</td><td>通用 API_BASE_URL / API_KEY / MODEL_NAME 三字段</td><td><span class="status no">设计不成立</span></td><td>OpenClaw 使用 provider-specific 凭据与配置；workspace `.env` 还会屏蔽 provider 密钥。</td><td>设置页按 DeepSeek / Anthropic / OpenAI 分 provider；写入 `$OPENCLAW_STATE_DIR/.env` 或 SecretRef/配置。</td><td class="accept conditional">重做后接受</td></tr>
+          <tr data-status="unknown"><td>R08</td><td>`/api/v1/init/config`、`/health`、`/agents/import`</td><td><span class="status unknown">均为推演接口</span></td><td>文档已明确“路径为推演值”，不能进入排期或验收合同。</td><td>优先官方 CLI/config；否则做独立 loopback helper，并加 token、Origin/CSRF 与输入校验。</td><td class="accept no">验证前不接受</td></tr>
+          <tr data-status="risk"><td>R09</td><td>首次设置 ≤3 步，保存后重启生效</td><td><span class="status risk">体验矛盾</span></td><td>“填 Key → 开始对话”与“重启后生效”不一致。</td><td>launcher 负责安全重启并自动回到 UI；把重启隐藏为一次“保存并启动”。</td><td class="accept conditional">修改后接受</td></tr>
+          <tr data-status="risk"><td>R10</td><td>.bat 作为最终入口</td><td><span class="status risk">PoC 可用，交付不足</span></td><td>群聊与《分析.pdf》均指出 bat 体验不正规且可能被杀软拦截。</td><td>bat 只作内部 PoC；交付用 Rust/原生 tray launcher，含状态、关闭、日志、恢复出厂。</td><td class="accept conditional">分阶段接受</td></tr>
+          <tr data-status="ok"><td>R11</td><td>Gateway 仅本地网页访问</td><td><span class="status ok">可行</span></td><td>官方默认 loopback；仍应配置 token，不能把本地等同于无认证。</td><td>绑定 127.0.0.1 + 长随机 token + 不暴露 LAN；运行 security audit。</td><td class="accept yes">接受</td></tr>
+          <tr data-status="no"><td>R12</td><td>把 OpenClaw 核心改为 system.db + user.db</td><td><span class="status no">不建议实施</span></td><td>官方当前状态并非单一 sqlite.db；还包含 workspace、auth、sessions 与 per-agent SQLite。</td><td>不改核心存储；做“只读预置模板 + 可删除用户状态”的目录级 copy-on-write。</td><td class="accept no">不接受原方案</td></tr>
+          <tr data-status="no"><td>R13</td><td>用户数据驻内存，5 分钟/进程退出刷盘</td><td><span class="status no">违背可靠性目标</span></td><td>断电/拔盘会丢最近数据；exit hook 不能保证异步持久化，也不覆盖崩溃。</td><td>使用官方持久化 + WAL/事务；优化日志和知识块读取，缓存只用于可重建数据。</td><td class="accept no">不接受</td></tr>
+          <tr data-status="risk"><td>R14</td><td>一键恢复出厂：删 user.db 即可</td><td><span class="status risk">目标可行，机制错误</span></td><td>用户状态分散在 config、workspace、agentDir、sessions、logs，不能只删一个库。</td><td>服务停止后，按版本化 manifest 删除“用户层”，再从净化模板物化；先自动备份。</td><td class="accept conditional">改机制后接受</td></tr>
+          <tr data-status="no"><td>R15</td><td>母盘 `data/` 整体覆盖实现 6 Agent 克隆</td><td><span class="status no">高泄露风险</span></td><td>可能复制 auth profile、API Key、测试会话、用户称呼与机器状态；多 Agent 也非单一目录。</td><td>使用 CLI/配置生成 6 Agent；只复制 workspace 内容、头像、知识库和允许的 manifest。</td><td class="accept conditional">净化后接受</td></tr>
+          <tr data-status="risk"><td>R16</td><td>6 个 Agent 开箱即用</td><td><span class="status risk">可行</span></td><td>官方支持多 Agent 独立 workspace/agentDir/session；需逐个权限和知识资产验收。</td><td>先做 2 个代表 Agent 验证模板机制，再扩至 6 个；全部工具默认 deny 后逐项开放。</td><td class="accept conditional">有条件接受</td></tr>
+          <tr data-status="risk"><td>R17</td><td>RAG 预向量化，chunk 800-1000 tokens</td><td><span class="status risk">方向可行，参数未定</span></td><td>预计算能减少首启成本，但 embedding 模型、索引格式、更新与授权均未冻结；固定 chunk 不是通用最优。</td><td>每知识库抽样评测召回率；记录 embedding 型号与版本，索引可重建，不把向量塞进核心 system.db。</td><td class="accept conditional">评测后接受</td></tr>
+          <tr data-status="risk"><td>R18</td><td>Claude/DeepSeek Prompt 缓存强制优化</td><td><span class="status risk">不应列 V2 硬要求</span></td><td>Prompt 组装由 OpenClaw/Provider 版本控制，RAG Top-K 还会变化前缀。</td><td>先记录 TTFT、缓存命中与 token 成本；仅使用官方支持的缓存能力，不 fork 核心。</td><td class="accept conditional">作为优化项接受</td></tr>
+          <tr data-status="risk"><td>R19</td><td>NTFS / exFAT / 双分区兼顾 Win + Mac</td><td><span class="status risk">目标冲突</span></td><td>V2 是 Windows；为二期 Mac 提前牺牲数据库可靠性没有必要。</td><td>V2 用 NTFS；V3 另做 Mac 镜像或数据交换分区，不共用运行时数据库。</td><td class="accept yes">按降级接受</td></tr>
+          <tr data-status="risk"><td>R20</td><td>异常拔盘后恢复、三机数据不丢</td><td><span class="status risk">只能风险可控</span></td><td>任何写入中的可移动介质都不能承诺断电零损坏。</td><td>launcher 安全退出、写入状态提示、WAL/备份、启动时完整性检查；口径改“可恢复到最近一致状态”。</td><td class="accept conditional">修改口径后接受</td></tr>
+          <tr data-status="ok"><td>R21</td><td>锁版本、禁止 latest、升级前备份</td><td><span class="status ok">正确</span></td><td>便携交付必须可复现；官方更新快，不能把运行盘当滚动发行。</td><td>再补 SBOM、hash、离线依赖缓存、回滚演练与安全补丁 SLA。</td><td class="accept yes">接受</td></tr>
+          <tr data-status="unknown"><td>R22</td><td>“22 项基本功能全过”</td><td><span class="status unknown">定义缺失</span></td><td>三份材料均未给 22 项清单、优先级、步骤和通过标准。</td><td>在排期签字前补齐编号、前置条件、测试数据、预期结果、负责人。</td><td class="accept no">清单前不接受</td></tr>
+          <tr data-status="unknown"><td>R23</td><td>联网研究、备份迁移、更新回滚至少做两项</td><td><span class="status unknown">范围未冻结</span></td><td>“至少两项”无法估时，也无法判断安全影响。</td><td>V2 固定备份迁移 + 更新回滚；联网研究进入二期。</td><td class="accept conditional">选择后接受</td></tr>
+          <tr data-status="risk"><td>R24</td><td>法务/财务/健康知识库预置</td><td><span class="status risk">内容合规风险</span></td><td>知识过期、地域差异和用户误信会造成专业责任；来源许可也未列明。</td><td>资料版本日期 + 来源 + 更新责任人 + 非专业建议声明；健康 Agent 禁止诊断/处方。</td><td class="accept conditional">治理到位后接受</td></tr>
+          <tr data-status="ok"><td>R25</td><td>不预置正式 Token、客户数据、默认密码</td><td><span class="status ok">必须保留</span></td><td>与安全基线一致；还应扩展到 OAuth、会话、日志、机器标识和测试截图。</td><td>克隆前运行 secrets scan + manifest allowlist + 两盘差异检查。</td><td class="accept yes">接受</td></tr>
+          <tr data-status="ok"><td>R26</td><td>第 3 周不通即降级 V1</td><td><span class="status ok">合理</span></td><td>有明确决策点，能控制无底洞式研发。</td><td>把触发条件写成量化指标，并预先准备 V1 包结构和用户说明。</td><td class="accept yes">接受</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="conflicts">
+      <div class="section-head"><h2>矛盾、违背与不清楚</h2><p>以下内容必须在主报告和实施方案中统一，否则同一团队会按不同版本开发和验收。</p></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>类型</th><th>冲突两端</th><th>判断</th><th>应如何改写</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag">安全冲突</span></td><td>“Key 随盘保留” ↔ “不预置 Token / 密钥不好保存、容易泄露”</td><td>便携与机密性不能无成本同时满足。</td><td>默认不保存；可选口令加密。把“Token 随盘”统一改为“配置与会话随盘，密钥按用户选择保存”。</td></tr>
+          <tr><td><span class="tag">隔离冲突</span></td><td>“盘外文件碰不到” ↔ “原生 Windows、无 Docker/WSL2”</td><td>缺少可证明的硬隔离机制。</td><td>改为工具策略与默认行为承诺；若必须硬隔离，另立 Docker/VM/专用主机路线。</td></tr>
+          <tr><td><span class="tag">架构冲突</span></td><td>主方案 `data/` 整体覆盖 ↔ 分析报告 system.db/user.db ↔ 官方 per-agent 多目录</td><td>三套存储模型互相不兼容。</td><td>以锁定版本的官方目录为真相源，输出一份路径/数据分级 manifest；取消核心双库改造。</td></tr>
+          <tr><td><span class="tag">可靠性冲突</span></td><td>“断电拔盘后可恢复” ↔ “内存驻留 5 分钟刷盘”</td><td>内存写回会扩大数据丢失窗口。</td><td>用户状态即时事务落盘；只缓存可重建索引/只读块，恢复口径限定为最近一致状态。</td></tr>
+          <tr><td><span class="tag">入口冲突</span></td><td>实施方案用 `.bat` ↔ 分析报告和群聊主张 Rust/C++ launcher</td><td>PoC 入口与交付入口被混为一谈。</td><td>明确 `.bat = 第 2-3 周内部 PoC`，`launcher.exe = 第 4-6 周样品交付`。</td></tr>
+          <tr><td><span class="tag">平台冲突</span></td><td>V2 Windows-only ↔ 文件系统又为二期 Mac 牺牲 ↔ V3 不承诺</td><td>二期目标干扰一期决策。</td><td>V2 选择 NTFS；V3 重新评估 Mac 镜像/分区，不保证共享运行数据库。</td></tr>
+          <tr><td><span class="tag">体验冲突</span></td><td>“填 Key 后开始对话 ≤3 步” ↔ “保存后重启生效”</td><td>用户步骤定义不一致。</td><td>“保存并启动”由 launcher 自动重启服务，不把重启暴露为用户操作。</td></tr>
+          <tr><td><span class="tag">版本违背</span></td><td>方案 B 写“Node 18+ 内置 fetch” ↔ 当前 OpenClaw 官方 Node 最低版本更高</td><td>过时前提会导致错误打包。</td><td>不写泛化 Node 18；锁定经过验证的 Node 精确版本并记录 hash。</td></tr>
+          <tr><td><span class="tag">术语不清</span></td><td>API token / API Key / Token 随盘混用</td><td>群聊已指出表达问题，不同 Provider 的 credential 也不等价。</td><td>统一用“模型服务商 API Key/凭据”；Gateway token 单独称“本地网关访问令牌”。</td></tr>
+          <tr><td><span class="tag">范围不清</span></td><td>22 项基本功能、三项增强至少两项、Office 解析器、最小可写目录</td><td>缺清单、选型、验收步骤和负责人。</td><td>全部进入需求基线表；没有 ID 和验收步骤的条目不得进入“完成度 100%”。</td></tr>
+          <tr><td><span class="tag">成本违背</span></td><td>5 周二人执行 ↔ 新增 launcher、安全设置页、6 Agent/RAG、三机/杀软/恢复测试</td><td>现范围大于现有人力估算。</td><td>要么增补 1 名前端/Windows 工程人力，要么先交 2 Agent + 手动配置的 V2a，再扩 6 Agent。</td></tr>
+          <tr><td><span class="tag">宣传风险</span></td><td>“任意电脑即插即用”心智 ↔ 指定版本 Windows + 普通权限/杀软/硬件差异</td><td>主报告的谨慎口径正确，必须压过群内口语宣传。</td><td>统一为“在已验证的 Windows 11 版本与设备条件下便携运行；兼容范围见清单”。</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="risks">
+      <div class="section-head"><h2>风险接受判断</h2><p>红线风险在方案修改前不能接受；黄色风险可通过证据、限定口径和回退机制接受。</p></div>
+      <div class="risk-list">
+        <article class="risk-card" data-level="P0 / RED"><h3>密钥泄露</h3><p><b>判断：</b>原方案不可接受。</p><p><b>控制：</b>默认不保存；可选口令加密；日志/崩溃报告必须脱敏；丢盘应有撤销与轮换指引。</p></article>
+        <article class="risk-card" data-level="P0 / RED"><h3>宿主机文件越界</h3><p><b>判断：</b>“绝对隔离”不可接受为宣传。</p><p><b>控制：</b>最小工具、workspaceOnly、禁 exec/elevated/browser、loopback + auth；PoC 做越界用例。</p></article>
+        <article class="risk-card" data-level="P0 / RED"><h3>母盘克隆隐私污染</h3><p><b>判断：</b>整目录直接克隆不可接受。</p><p><b>控制：</b>allowlist manifest、secrets scan、净化模板、首启生成唯一标识；克隆后做差异扫描。</p></article>
+        <article class="risk-card" data-level="P1 / AMBER"><h3>杀软误报与启动失败</h3><p><b>判断：</b>样品期可接受，量产前不可忽略。</p><p><b>控制：</b>原生 launcher、代码签名预算、主流 Defender/火绒/360 实测、可读错误与离线日志。</p></article>
+        <article class="risk-card" data-level="P1 / AMBER"><h3>拔盘/断电数据库损坏</h3><p><b>判断：</b>只能接受“可恢复”，不能接受“零丢失”。</p><p><b>控制：</b>显式安全关闭、写入中提示、事务/WAL、轮转备份、启动完整性检查、恢复演练。</p></article>
+        <article class="risk-card" data-level="P1 / AMBER"><h3>OpenClaw 快速变更</h3><p><b>判断：</b>锁版本后可接受。</p><p><b>控制：</b>精确版本与 hash、SBOM、禁 latest、离线依赖、单独安全补丁通道与回滚包。</p></article>
+        <article class="risk-card" data-level="P1 / AMBER"><h3>专业 Agent 内容责任</h3><p><b>判断：</b>治理后可接受。</p><p><b>控制：</b>来源、地域、版本日期、免责声明、拒答边界、内容更新人；健康类不诊断不处方。</p></article>
+        <article class="risk-card" data-level="P2 / AMBER"><h3>排期与人工低估</h3><p><b>判断：</b>当前数字不能写死。</p><p><b>控制：</b>PoC 后重估；V2a 优先 2 Agent + launcher + 安全配置，6 Agent/RAG 扩展为下一里程碑。</p></article>
+      </div>
+    </section>
+
+    <section id="gates">
+      <div class="section-head"><h2>逐周签字门</h2><p>只有当前周证据通过，下一周范围和成本才继续生效。</p></div>
+      <div class="gate">
+        <div class="week">第 2 周</div><div><strong>版本与路径定版</strong><span>Node/OpenClaw 精确版本、NTFS、真实 state/config/workspace 映射、PoC 脚本</span></div><div class="proof"><strong>通过证据</strong><span>本机从盘启动；hash/SBOM；无未锁依赖；启动日志可复现</span></div>
+        <div class="week">第 3 周</div><div><strong>V2 / V1 决策门</strong><span>干净 Win11、普通权限、盘符变化、杀软、异常拔盘、盘外写入</span></div><div class="proof"><strong>通过证据</strong><span>≤2 分钟启动；核心对话成功；失败可诊断；不通过即切 V1</span></div>
+        <div class="week">第 4 周</div><div><strong>安全配置与 launcher</strong><span>provider 配置、loopback auth、自动重启、品牌栏、说明页</span></div><div class="proof"><strong>通过证据</strong><span>三家 provider 实测；Key 不进日志；设置页无推演 API；杀软可运行</span></div>
+        <div class="week">第 5 周</div><div><strong>Agent 净化与权限</strong><span>6 Agent 或批准的 V2a 范围、知识库、工具策略、恢复出厂</span></div><div class="proof"><strong>通过证据</strong><span>secrets scan 为零；安全审计无 critical；用户层删除/恢复正确</span></div>
+        <div class="week">第 6 周</div><div><strong>克隆与验收</strong><span>母盘冻结、克隆 SOP、三机数据迁移、备份/回滚、限制说明</span></div><div class="proof"><strong>通过证据</strong><span>母盘/克隆盘 hash；差异扫描；验收录像 + 原始日志 + 签字表</span></div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="section-head"><h2>依据与审查边界</h2><p>本报告已逐页读取三份 PDF，并以官方资料核对会变化的技术事实。</p></div>
+      <div class="source-list">
+        <div class="source"><b>《可行性评估.pdf》</b>重点依据：第 1-2 页目标与硬标准、第 5 页排期/依赖、第 6 页待核对项。</div>
+        <div class="source"><b>《技术实施方案.pdf》</b>重点依据：第 1-4 页路径/启动/设置页、第 5-6 页 Agent 预制、第 8 页待验证与评审表。</div>
+        <div class="source"><b>《分析.pdf》</b>重点依据：双数据库、内存驻留、RAG/缓存与 Rust launcher 建议；其中部分与当前官方架构不一致，已单独裁决。</div>
+        <div class="source"><b>群聊截图</b>重点依据：方案 A/B 选择、bat 体验、API token 用词、系统托盘、双库隔离、密钥保存争议。</div>
+        <div class="source"><b><a href="https://github.com/openclaw/openclaw/blob/main/docs/install/index.md">OpenClaw · Install</a></b>核对 Windows 支持、Node 版本、安装与更新方式。</div>
+        <div class="source"><b><a href="https://docs.openclaw.ai/help/environment">OpenClaw · Environment</a></b>核对 HOME/STATE/CONFIG/WORKSPACE 路径变量与密钥来源限制。</div>
+        <div class="source"><b><a href="https://docs.openclaw.ai/concepts/agent-workspace">OpenClaw · Agent workspace</a></b>核对 workspace 不是硬沙箱、Agent 状态与迁移路径。</div>
+        <div class="source"><b><a href="https://docs.openclaw.ai/multi-agent">OpenClaw · Multi-agent</a></b>核对 per-agent workspace、agentDir、auth 和 session store。</div>
+        <div class="source"><b><a href="https://docs.openclaw.ai/gateway/security">OpenClaw · Security</a></b>核对 loopback/auth、工具策略、磁盘会话、security audit 与密钥规则。</div>
+        <div class="source"><b><a href="https://github.com/openclaw/openclaw">OpenClaw · GitHub</a></b>核对 MIT License 与第三方 notices。</div>
+        <div class="source"><b><a href="https://learn.microsoft.com/en-us/lifecycle/announcements/windows-10-end-of-support">Microsoft · Windows 10 生命周期</a></b>核对 Win10 22H2 于 2025-10-14 结束支持。</div>
+      </div>
+      <div class="callout"><strong>边界说明：</strong>官方文档只能否定错误假设，不能替代目标母盘实测。最终签字仍需以锁定版本、目标 SSD、真实干净机与杀软环境的证据为准。</div>
+    </section>
+
+    <footer><span>U-Claw 立项前技术审核 · 曾煜曦视角</span><span>生成日期 2026-08-08 · 版本 1.0</span></footer>
+  </main>
+</div>
+<button class="print-btn" onclick="window.print()">打印 / 导出 PDF</button>
+<script>
+  const filterButtons=[...document.querySelectorAll('[data-filter]')];
+  const rows=[...document.querySelectorAll('#matrixTable tbody tr')];
+  filterButtons.forEach(btn=>btn.addEventListener('click',()=>{
+    filterButtons.forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+    const filter=btn.dataset.filter;
+    rows.forEach(row=>row.hidden=filter!=='all'&&row.dataset.status!==filter);
+  }));
+  document.querySelectorAll('#submitList input[type="checkbox"]').forEach(box=>{
+    const key='uclaw-review-'+box.dataset.key;
+    box.checked=localStorage.getItem(key)==='1';
+    box.addEventListener('change',()=>localStorage.setItem(key,box.checked?'1':'0'));
+  });
+</script>
+</body>
+</html>

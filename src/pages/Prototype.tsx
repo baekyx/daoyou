@@ -7,17 +7,26 @@ import { resolveRoomEntry } from "@/api/roomActivity";
 import { Login, RoleSelect } from "@/pages/auth/AuthScreens";
 import { IdentityAccount } from "@/pages/auth/IdentityAccount";
 import { Profile, MyPage } from "@/pages/auth/ProfileScreen";
-import { RecordsScreen } from "@/pages/records/RecordsScreen";
-import { GuideHome, CreateRoom, RoomSuccess, GuideLive, EndConfirm } from "@/pages/guide/GuideScreens";
+import { RecordDetailScreen, RecordsScreen } from "@/pages/records/RecordsScreen";
+import { GuideHome, CreateRoom, RoomSuccess, GuideLive, type GuideLiveSnapshot } from "@/pages/guide/GuideScreens";
 import { GuestList, GuideSubtitleRecord, KnowledgeCardLib, KnowledgeCardDetail, EndResult } from "@/pages/guide/GuideExtra";
 import { RoomList, Password, Listening, Question, SubtitleSettings } from "@/pages/tourist/TouristScreens";
 import { RecentRooms, SubtitleTab, TouristMyPage } from "@/pages/tourist/TouristExtra";
 import { RoomRtcProvider } from "@/hooks/use-room-rtc";
+import { RoomPresenceProvider } from "@/hooks/use-room-presence";
 import { RoomAlbumTab, RoomPhotoDetail } from "@/pages/tourist/RoomAlbumScreens";
-import { CardAlert, CardLibrary, CardDetail, RoomCardDetail, SubtitleHistory } from "@/pages/cards/CardScreens";
+import {
+  CardAlert,
+  CardLibrary,
+  TouristCardLibrary,
+  CardDetail,
+  RoomCardDetail,
+  SubtitleHistory,
+} from "@/pages/cards/CardScreens";
 import { Album, PhotoDetail, PhotographerHome, Upload } from "@/pages/photos/PhotoScreens";
 import { PhotographerTasks, PhotographerJoin, PhotographerWait, PhotographerAlbum, PhotoDeleteRequest } from "@/pages/photographer/PhotographerScreens";
 import { PhotographerStoragePage, PhotographerPrivacyPage, PhotographerHelpPage } from "@/pages/photographer/PhotographerSettingsScreens";
+import { HelpFeedbackScreen, NotificationsScreen } from "@/pages/settings/SupportScreens";
 
 /** sessionStorage key：待处理邀请房间号（不含密码） */
 export const PENDING_INVITE_KEY = 'shiguang-pending-invite';
@@ -43,9 +52,11 @@ const PAGE_IDS = [
   // auth
   "login","role","profile","my","identity-account",
   // guide
-  "guide-home","create-room","room-success","guide-live","end-confirm","end-result",
-  "guest-list","guide-subtitle-record","kc-library","kc-detail","records",
+  "guide-home","create-room","room-success","guide-live","end-result",
+  "guest-list","guide-subtitle-record","kc-library","kc-detail","records","record-detail",
   "guide-subtitle-settings",
+  // shared settings
+  "notifications","help-feedback",
   // tourist pre-room
   "room-list","recent-rooms","password","tourist-my",
   // tourist in-room
@@ -63,20 +74,26 @@ type PageId = typeof PAGE_IDS[number];
 
 /** 各角色专属页集合（双向守卫） */
 const GUIDE_ONLY_PAGES = new Set<string>([
-  "guide-home","create-room","room-success","guide-live","end-confirm","end-result",
-  "guest-list","guide-subtitle-record","kc-library","kc-detail","records",
+  "guide-home","create-room","room-success","guide-live","end-result",
+  "guest-list","guide-subtitle-record","kc-library","kc-detail","record-detail",
   "guide-subtitle-settings",
 ]);
 const TOURIST_ONLY_PAGES = new Set<string>([
   "room-list","recent-rooms","password","tourist-my",
   "listening","subtitle-tab","room-album","room-photo-detail","question","subtitle-settings",
-  // card-alert, card-library 仅限游客/导游；room-card-detail 导游+游客均可访问（单独处理）
-  "card-alert","card-library","card-detail","subtitle-history",
+  "card-alert","subtitle-history",
+]);
+const GUIDE_TOURIST_SHARED_PAGES = new Set<string>([
+  "card-library","card-detail","room-card-detail",
 ]);
 const PHOTOGRAPHER_ONLY_PAGES = new Set<string>([
   "photographer-home","photographer-tasks","photo-join","photo-wait",
   "photographer-album","photo-delete","photographer-my","upload",
   "photographer-storage","photographer-privacy","photographer-help",
+]);
+/** 摄影师可只读访问的跨角色归档页。 */
+const PHOTOGRAPHER_READONLY_SHARED_PAGES = new Set<string>([
+  "subtitle-history",
 ]);
 
 /**
@@ -90,8 +107,19 @@ const PHOTOGRAPHER_ONLY_PAGES = new Set<string>([
  */
 function resolveHashWithRole(
   targetId: PageId,
-  role: string | undefined | null
+  role: string | undefined | null,
+  authenticated: boolean,
 ): PageId {
+  // 未登录用户只能进入登录页，hash 不能绕过登录态。
+  if (!authenticated && targetId !== 'login') {
+    history.replaceState(null, '', '#login');
+    return 'login';
+  }
+  // 已登录但尚未选择角色时，只允许完成注册流程。
+  if (authenticated && !role && !['role', 'profile', 'login'].includes(targetId)) {
+    history.replaceState(null, '', '#role');
+    return 'role';
+  }
   // photographer-home 已废弃入口，统一重定向到 photographer-tasks
   if (targetId === 'photographer-home') {
     history.replaceState(null, '', '#photographer-tasks');
@@ -108,9 +136,23 @@ function resolveHashWithRole(
     return 'photographer-tasks' as PageId;
   }
   // 摄影师访问游客专属页
-  if (role === 'photographer' && TOURIST_ONLY_PAGES.has(targetId)) {
+  if (
+    role === 'photographer' &&
+    (TOURIST_ONLY_PAGES.has(targetId) || GUIDE_TOURIST_SHARED_PAGES.has(targetId)) &&
+    !PHOTOGRAPHER_READONLY_SHARED_PAGES.has(targetId)
+  ) {
     history.replaceState(null, '', '#photographer-tasks');
     return 'photographer-tasks' as PageId;
+  }
+  // 游客访问导游专属页
+  if (role === 'tourist' && GUIDE_ONLY_PAGES.has(targetId)) {
+    history.replaceState(null, '', '#room-list');
+    return 'room-list';
+  }
+  // 导游访问游客专属页
+  if (role === 'guide' && TOURIST_ONLY_PAGES.has(targetId)) {
+    history.replaceState(null, '', '#guide-home');
+    return 'guide-home';
   }
   // 导游访问摄影师专属页
   if (role === 'guide' && PHOTOGRAPHER_ONLY_PAGES.has(targetId)) {
@@ -223,7 +265,7 @@ const PrototypePage: React.FC = () => {
 
     // 首次加载身份防御：统一处理导游/摄影师访问越权 hash
     if (fromHash) {
-      fromHash = resolveHashWithRole(fromHash, profile?.role);
+      fromHash = resolveHashWithRole(fromHash, profile?.role, Boolean(user));
     }
 
     if (fromHash) {
@@ -240,18 +282,25 @@ const PrototypePage: React.FC = () => {
       const id = hashPage();
       if (!id) return;
       // 运行时身份防御：统一处理导游/摄影师访问越权 hash
-      const safe = resolveHashWithRole(id, profile?.role);
+      const safe = resolveHashWithRole(id, profile?.role, Boolean(user));
       // resolveHashWithRole 已用 replaceState 同步 hash，直接 setCurrent
       setCurrent(safe);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.role]);
+  }, [profile?.role, user]);
 
-  const go = (id: string) => {
+  const go = (
+    id: string,
+    authOverride?: { authenticated: boolean; role?: string | null },
+  ) => {
     // go() 也经过双向身份守卫，与 hash/hashchange 路径统一
-    const safe = resolveHashWithRole(id as PageId, profile?.role);
+    const safe = resolveHashWithRole(
+      id as PageId,
+      authOverride?.role ?? profile?.role,
+      authOverride?.authenticated ?? Boolean(user),
+    );
     setCurrent(safe);
     window.location.hash = safe;
   };
@@ -282,6 +331,21 @@ const TOURIST_IN_ROOM_PAGES = new Set([
   "room-card-detail", "subtitle-history",
 ]);
 
+/** 已结束房间的只读内容页：允许游客查看，但不应重新建立 RTC/Presence 会话。 */
+const TOURIST_ARCHIVE_PAGES = new Set([
+  "subtitle-history", "room-album", "room-photo-detail",
+]);
+
+/**
+ * 导游讲解中的工具页。
+ *
+ * GuideLive 在这些页面之间切换时始终保持挂载，避免卸载清理逻辑停止麦克风、
+ * 百度 RTC/WebRTC 推流、流式识别与计时。工具页只覆盖显示，不接管讲解生命周期。
+ */
+const GUIDE_LIVE_TOOL_PAGES = new Set([
+  "guide-live", "guest-list", "guide-subtitle-record", "card-library",
+]);
+
 function InRoomScreen({ id, go }: { id: string; go: (id: string) => void }) {
   switch (id) {
     case "listening":             return <Listening go={go} />;
@@ -291,10 +355,27 @@ function InRoomScreen({ id, go }: { id: string; go: (id: string) => void }) {
     case "question":              return <Question go={go} />;
     case "subtitle-settings":     return <SubtitleSettings go={go} />;
     case "card-alert":            return <CardAlert go={go} />;
-    case "card-library":          return <CardLibrary go={go} />;
+    case "card-library":          return <TouristCardLibrary go={go} />;
     case "card-detail":           return <CardDetail go={go} />;
     case "room-card-detail":      return <RoomCardDetail go={go} />;
     case "subtitle-history":      return <SubtitleHistory go={go} />;
+    default:                      return null;
+  }
+}
+
+function GuideLiveToolScreen({
+  id,
+  go,
+  snapshot,
+}: {
+  id: string;
+  go: (id: string) => void;
+  snapshot: GuideLiveSnapshot | null;
+}) {
+  switch (id) {
+    case "guest-list":            return <GuestList go={go} initialMembers={snapshot?.members} presenceProvided />;
+    case "guide-subtitle-record": return <GuideSubtitleRecord go={go} initialSubtitles={snapshot?.subtitles} />;
+    case "card-library":          return <CardLibrary go={go} />;
     default:                      return null;
   }
 }
@@ -305,7 +386,51 @@ function InRoomScreen({ id, go }: { id: string; go: (id: string) => void }) {
  * - 离开游客房间内页面（go('room-list') 等）时，Provider unmount，channel 正常清理
  */
 function ScreenRouter({ id, go }: { id: string; go: (id: string) => void }) {
-  const inRoom = TOURIST_IN_ROOM_PAGES.has(id);
+  const { profile, currentRoom, user } = useAuth();
+  const [guideLiveSnapshot, setGuideLiveSnapshot] = useState<GuideLiveSnapshot | null>(null);
+  const handleGuideLiveSnapshot = React.useCallback((snapshot: GuideLiveSnapshot) => {
+    setGuideLiveSnapshot(snapshot);
+  }, []);
+  const guideLiveTool = profile?.role === "guide" && GUIDE_LIVE_TOOL_PAGES.has(id);
+  // 只有游客的房间内页面需要保持 RTC 容器；摄影师查看已结束房间的
+  // 字幕/纪要属于只读归档链路，不应创建游客 RTC 会话。
+  const touristRoomPage = profile?.role === "tourist" && TOURIST_IN_ROOM_PAGES.has(id);
+  const archivedRoom = currentRoom?.status === "ended" || currentRoom?.status === "archived";
+  const archivePage = touristRoomPage && archivedRoom && TOURIST_ARCHIVE_PAGES.has(id);
+  const inRoom = touristRoomPage && !archivePage;
+
+  if (guideLiveTool) {
+    return (
+      <RoomPresenceProvider
+        roomId={currentRoom?.id ?? ""}
+        userId={user?.id ?? ""}
+        role="guide"
+      >
+        <GuideLive
+          go={go}
+          visible={id === "guide-live"}
+          onSnapshot={handleGuideLiveSnapshot}
+          presenceProvided
+        />
+        {id !== "guide-live" && (
+          <GuideLiveToolScreen id={id} go={go} snapshot={guideLiveSnapshot} />
+        )}
+      </RoomPresenceProvider>
+    );
+  }
+
+  if (profile?.role === "photographer" && id === "upload") {
+    return (
+      <RoomPresenceProvider
+        roomId={currentRoom?.id ?? ""}
+        userId={user?.id ?? ""}
+        role="photographer"
+      >
+        <NonRoomScreen id={id} go={go} />
+      </RoomPresenceProvider>
+    );
+  }
+
   return (
     <>
       {/* RoomRtcProvider 仅在游客房间内时挂载，且子页面切换时保持稳定不重建 */}
@@ -314,7 +439,8 @@ function ScreenRouter({ id, go }: { id: string; go: (id: string) => void }) {
           <InRoomScreen id={id} go={go} />
         </RoomRtcProvider>
       )}
-      {!inRoom && <NonRoomScreen id={id} go={go} />}
+      {archivePage && <InRoomScreen id={id} go={go} />}
+      {!inRoom && !archivePage && <NonRoomScreen id={id} go={go} />}
     </>
   );
 }
@@ -332,14 +458,16 @@ function NonRoomScreen({ id, go }: { id: string; go: (id: string) => void }) {
     case "create-room":            return <CreateRoom go={go} />;
     case "room-success":           return <RoomSuccess go={go} />;
     case "guide-live":             return <GuideLive go={go} />;
-    case "end-confirm":            return <EndConfirm go={go} />;
     case "end-result":             return <EndResult go={go} />;
     case "guest-list":             return <GuestList go={go} />;
     case "guide-subtitle-record":  return <GuideSubtitleRecord go={go} />;
     case "kc-library":             return <KnowledgeCardLib go={go} />;
     case "kc-detail":              return <KnowledgeCardDetail go={go} />;
     case "records":                return <RecordsScreen go={go} />;
+    case "record-detail":          return <RecordDetailScreen go={go} />;
     case "guide-subtitle-settings": return <SubtitleSettings go={go} returnTo="my" />;
+    case "notifications":          return <NotificationsScreen go={go} />;
+    case "help-feedback":          return <HelpFeedbackScreen go={go} />;
     // ── 游客入房前 ──
     case "room-list":              return <RoomList go={go} />;
     case "recent-rooms":           return <RecentRooms go={go} />;
@@ -347,6 +475,8 @@ function NonRoomScreen({ id, go }: { id: string; go: (id: string) => void }) {
     case "invite-expired":
     case "password":               return <Password go={go} returnTo="room-list" />;
     case "tourist-my":             return <TouristMyPage go={go} />;
+    // ── 跨角色只读归档 ──
+    case "subtitle-history":       return <SubtitleHistory go={go} />;
     // ── 旧版相册兼容 ──
     case "album":                  return <Album go={go} />;
     case "photo":                  return <PhotoDetail go={go} />;

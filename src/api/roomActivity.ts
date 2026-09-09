@@ -90,6 +90,42 @@ export async function verifyRoomPasswordOnly(
 }
 
 /**
+ * 摄影师凭房间密码直接加入。
+ * 服务端完成密码校验、频率限制，并把 memberships 持久化为 approved。
+ */
+export async function joinPhotographerRoomWithPassword(
+  roomId: string,
+  password: string
+): Promise<{
+  ok: boolean;
+  code: string;
+  attemptsRemaining?: number;
+  retryAfterSeconds?: number;
+}> {
+  const { data, error } = await supabase.rpc("join_photographer_room_with_password", {
+    p_room_id: roomId,
+    p_password: password,
+  });
+  if (error) {
+    const missingRpc = error.code === "42883"
+      || error.message.includes("join_photographer_room_with_password");
+    return { ok: false, code: missingRpc ? "service_not_configured" : error.message };
+  }
+  const result = data as {
+    ok: boolean;
+    code: string;
+    attempts_remaining?: number;
+    retry_after_seconds?: number;
+  };
+  return {
+    ok: result.ok,
+    code: result.code,
+    attemptsRemaining: result.attempts_remaining,
+    retryAfterSeconds: result.retry_after_seconds,
+  };
+}
+
+/**
  * joinRoomWithPassword: A2 预置版 — 服务端 bcrypt 校验 + 限流
  * 首次加入（游客）或重新验证密码时使用；成功后写入 room_members tourist 角色
  * 摄影师禁止调用此函数，请使用 verifyRoomPasswordOnly
@@ -192,6 +228,14 @@ export async function fetchMyJoinedRooms(_userId?: string): Promise<Room[]> {
   if (error || !data) return [];
   const arr = Array.isArray(data) ? data : (data as unknown[]);
   return arr.filter((r): r is Room => r !== null && typeof r === "object");
+}
+
+/** 获取本人参与房间；失败时抛错，避免页面把网络/权限异常误显示为空列表。 */
+export async function fetchMyJoinedRoomsStrict(): Promise<Room[]> {
+  const { data, error } = await supabase.rpc("get_my_joined_rooms_secure");
+  if (error) throw new Error(error.message || "参与记录读取失败");
+  const arr = Array.isArray(data) ? data : [];
+  return arr.filter((room): room is Room => room !== null && typeof room === "object");
 }
 
 // ===== 提问 =====

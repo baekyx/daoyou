@@ -11,7 +11,7 @@
  * URL 参数 rtcRelay=1 时强制 relay 模式（iceTransportPolicy:'relay'）。
  */
 
-export type CandidateKind = 'host' | 'srflx' | 'relay' | 'unknown';
+export type CandidateKind = 'host' | 'srflx' | 'relay' | 'baidu' | 'unknown';
 
 /** 解析单个 RTCIceCandidate 的候选类型 */
 export function parseCandidateKind(candidate: RTCIceCandidate | null | undefined): CandidateKind {
@@ -31,6 +31,13 @@ export function isTurnConfigured(): boolean {
   const user = import.meta.env.VITE_TURN_USERNAME ?? '';
   const cred = import.meta.env.VITE_TURN_CREDENTIAL ?? '';
   return urls.trim() !== '' && user.trim() !== '' && cred.trim() !== '';
+}
+
+/** 是否已配置百度 RTC。AppID 可公开，AppKey 只在本地/云端令牌服务使用。 */
+export function isBaiduRtcConfigured(): boolean {
+  return Boolean(
+    String(import.meta.env.VITE_BAIDU_RTC_APP_ID ?? '').trim()
+  );
 }
 
 /** 当前是否为 relay 强制模式（URL 参数 rtcRelay=1） */

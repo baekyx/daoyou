@@ -172,6 +172,30 @@ export async function fetchKcPage(
 // ── 推送选择页专用分页（无限滚动，稳定排序） ──────────────────────────────
 const PUSH_PAGE_SIZE = 10;
 
+async function deterministicPushId(roomId: string, kcCardId: string): Promise<string> {
+  const input = new TextEncoder().encode(`${roomId}:${kcCardId}`);
+  let bytes: Uint8Array;
+  if (globalThis.crypto?.subtle) {
+    bytes = new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", input)).slice(0, 16);
+  } else {
+    // 非安全上下文兼容：四组 FNV-1a 生成稳定 128 bit；数据库触发器仍是最终防线。
+    const out = new Uint8Array(16);
+    for (let block = 0; block < 4; block += 1) {
+      let hash = (0x811c9dc5 ^ (block * 0x9e3779b9)) >>> 0;
+      for (const value of input) {
+        hash ^= value;
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+      }
+      new DataView(out.buffer).setUint32(block * 4, hash);
+    }
+    bytes = out;
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map(value => value.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export interface FetchKcForPushResult {
   cards: KnowledgeCard[];
   /** 本批实际返回数量 < PUSH_PAGE_SIZE 代表已到末尾 */
@@ -186,6 +210,7 @@ export interface FetchKcForPushResult {
  * - 不联查 card_pushes（已推送判断由调用方维护，避免权限边界问题）。
  */
 export async function fetchKcPageForPush(
+  ownerId: string,
   cursor?: { createdAt: string; id: string },
   category?: string,
   search?: string,
@@ -193,6 +218,7 @@ export async function fetchKcPageForPush(
   let query = supabase
     .from("knowledge_cards")
     .select("*")
+    .eq("created_by", ownerId)
     .eq("status", "published")
     .is("deleted_at", null)
     .order("created_at", { ascending: true })
@@ -233,9 +259,32 @@ export async function pushKcCard(
   kcCardId: string,
   pushedBy: string
 ): Promise<{ push: CardPush | null; error: string | null }> {
+  const { data: ownedCard, error: ownerError } = await supabase
+    .from("knowledge_cards")
+    .select("id")
+    .eq("id", kcCardId)
+    .eq("created_by", pushedBy)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (ownerError) return { push: null, error: ownerError.message };
+  if (!ownedCard) return { push: null, error: "只能推送当前导游本人创建且未下架的卡片" };
+
+  const { data: previousPush, error: previousError } = await supabase
+    .from("card_pushes")
+    .select("*")
+    .eq("room_id", roomId)
+    .eq("kc_card_id", kcCardId)
+    .order("pushed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (previousError) return { push: null, error: previousError.message };
+  if (previousPush) return { push: previousPush, error: null };
+
+  const pushId = await deterministicPushId(roomId, kcCardId);
   const { data, error } = await supabase
     .from("card_pushes")
     .insert({
+      id: pushId,
       room_id: roomId,
       kc_card_id: kcCardId,
       pushed_by: pushedBy,
@@ -243,7 +292,19 @@ export async function pushKcCard(
     })
     .select()
     .maybeSingle();
-  return { push: data, error: error?.message ?? null };
+  if (error && error.code !== "23505") return { push: null, error: error.message };
+  if (data) return { push: data, error: null };
+
+  // 数据库幂等触发器会忽略同一房间的重复推送；返回既有记录作为成功结果。
+  const { data: existing, error: existingError } = await supabase
+    .from("card_pushes")
+    .select("*")
+    .eq("room_id", roomId)
+    .eq("kc_card_id", kcCardId)
+    .order("pushed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return { push: existing, error: existingError?.message ?? null };
 }
 
 /**
@@ -273,6 +334,38 @@ export async function fetchLatestPushedKc(
   if (error || !data) return null;
   const kc = data as KnowledgeCard;
   return { kcCardId: kc.id, kc };
+}
+
+/** 游客端：读取当前房间已推送的全部 KC，按最新推送在前展示。
+ * 卡片正文仍逐条走 get_kc_by_push RPC，确保只能读取本房间已推送内容。 */
+export async function fetchPushedKcsForRoom(
+  roomId: string,
+  limit = 50,
+): Promise<Array<{ kcCardId: string; pushedAt: string; kc: KnowledgeCard }>> {
+  const { data, error } = await supabase
+    .from("card_pushes")
+    .select("kc_card_id,pushed_at")
+    .eq("room_id", roomId)
+    .not("kc_card_id", "is", null)
+    .order("pushed_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as Array<{ kc_card_id: string | null; pushed_at: string }>;
+  const uniqueRows = rows.filter(
+    (row, index, all) =>
+      Boolean(row.kc_card_id)
+      && all.findIndex(candidate => candidate.kc_card_id === row.kc_card_id) === index,
+  );
+  const cards = await Promise.all(
+    uniqueRows.map(async row => {
+      const kc = await fetchKcByPush(roomId, row.kc_card_id!);
+      return kc ? { kcCardId: row.kc_card_id!, pushedAt: row.pushed_at, kc } : null;
+    }),
+  );
+  return cards.filter(
+    (item): item is { kcCardId: string; pushedAt: string; kc: KnowledgeCard } => item !== null,
+  );
 }
 
 /**
@@ -328,5 +421,3 @@ export async function importKcToRoom(
   }
   return { roomCard: data, error: null };
 }
-
-

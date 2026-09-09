@@ -17,6 +17,7 @@ export function RoomAlbumTab({ go }: Props) {
   const { currentRoom, user } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const isArchive = currentRoom?.status === 'ended' || currentRoom?.status === 'archived';
 
   const load = () => {
     if (!currentRoom) return;
@@ -32,10 +33,14 @@ export function RoomAlbumTab({ go }: Props) {
   };
 
   return (
-    <div className="screen padded-screen room-album-screen">
+    <div className={`screen padded-screen room-album-screen${isArchive ? ' archive-album-screen' : ' has-tabbar'}`}>
       <div className="mini-header">
-        <span />
-        <strong>相册</strong>
+        {isArchive ? (
+          <button className="back-button" onClick={() => go('recent-rooms')} aria-label="返回最近记录">
+            <span className="back-chevron" />
+          </button>
+        ) : <span />}
+        <strong>{isArchive ? '房间照片' : '相册'}</strong>
         <button className="icon-btn" onClick={load} aria-label="刷新"><RefreshCw size={16} /></button>
       </div>
 
@@ -49,7 +54,7 @@ export function RoomAlbumTab({ go }: Props) {
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : photos.length === 0 ? (
-        <div className="empty-state" style={{ paddingTop: 60 }}>
+        <div className="empty-state room-album-empty">
           <div className="empty-illus-album" />
           <p className="empty-title">照片还在路上</p>
           <small className="empty-desc">摄影师上传后会显示在这里</small>
@@ -66,7 +71,7 @@ export function RoomAlbumTab({ go }: Props) {
         </div>
       )}
 
-      <BottomNav active="相册" go={go} variant="room" />
+      {!isArchive && <BottomNav active="相册" go={go} variant="room" />}
     </div>
   );
 }

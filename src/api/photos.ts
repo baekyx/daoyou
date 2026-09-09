@@ -41,7 +41,49 @@ export async function uploadPhoto(
     .select()
     .maybeSingle();
 
+  if (error || !data) {
+    await supabase.storage.from("photos").remove([storageData.path]);
+  }
   return { photo: data, error: error?.message ?? null };
+}
+
+function storagePathFromPublicUrl(url: string): string | null {
+  try {
+    const pathname = new URL(url).pathname;
+    const marker = "/storage/v1/object/public/photos/";
+    const index = pathname.indexOf(marker);
+    if (index < 0) return null;
+    return decodeURIComponent(pathname.slice(index + marker.length));
+  } catch {
+    return null;
+  }
+}
+
+/** 摄影师直接删除本人照片；数据库记录删除后游客立即不可见。 */
+export async function deleteOwnPhoto(
+  photo: Photo,
+  photographerId: string,
+): Promise<{ error: string | null; warning?: string | null }> {
+  const { data, error } = await supabase
+    .from("photos")
+    .delete()
+    .eq("id", photo.id)
+    .eq("photographer_id", photographerId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "照片不存在或没有删除权限" };
+
+  const storagePath = storagePathFromPublicUrl(photo.url);
+  if (storagePath) {
+    // 业务记录已成功删除时，不因底层文件清理失败让照片重新出现在用户端。
+    const { error: storageError } = await supabase.storage.from("photos").remove([storagePath]);
+    if (storageError) {
+      return { error: null, warning: "照片已从相册删除，但云端原文件清理失败" };
+    }
+  }
+  return { error: null, warning: null };
 }
 
 // ===== 收藏 =====

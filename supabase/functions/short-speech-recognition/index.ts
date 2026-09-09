@@ -6,20 +6,66 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// 百度 ASR dev_pid 方言映射
-// 1537: 普通话, 1637: 粤语, 1638: 四川话, 1639: 东北话, 1640: 闽南语, 1536: 普通话（含标点）
-const VALID_DEV_PIDS = new Set([1536, 1537, 1637, 1638, 1639, 1640]);
+const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+const TOKEN_URL = "https://aip.baidubce.com/oauth/2.0/token";
+const ASR_URL = "https://vop.baidu.com/server_api";
+const VALID_FORMATS = new Set(["pcm", "wav", "amr", "m4a"]);
+const VALID_RATES = new Set([8000, 16000]);
+// 百度短语音识别标准版当前支持：普通话、英语、粤语、四川话。
+const VALID_DEV_PIDS = new Set([1537, 1737, 1637, 1837]);
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+
+let cachedToken = "";
+let tokenExpiresAt = 0;
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: jsonHeaders });
+}
+
+async function getAccessToken(): Promise<string> {
+  // 提前 5 分钟刷新，避免请求过程中 token 到期。
+  if (cachedToken && Date.now() < tokenExpiresAt - 5 * 60 * 1000) {
+    return cachedToken;
+  }
+
+  const apiKey = Deno.env.get("BAIDU_API_KEY");
+  const secretKey = Deno.env.get("BAIDU_SECRET_KEY");
+  if (!apiKey || !secretKey) {
+    throw new Error("BAIDU_CREDENTIALS_MISSING");
+  }
+
+  const url = new URL(TOKEN_URL);
+  url.searchParams.set("grant_type", "client_credentials");
+  url.searchParams.set("client_id", apiKey);
+  url.searchParams.set("client_secret", secretKey);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
+  });
+  const data = await response.json();
+
+  if (!response.ok || !data.access_token) {
+    console.error("[baidu-asr] 获取 access_token 失败", {
+      status: response.status,
+      error: data.error,
+      error_description: data.error_description,
+    });
+    throw new Error("BAIDU_AUTH_FAILED");
+  }
+
+  cachedToken = data.access_token;
+  tokenExpiresAt = Date.now() + Number(data.expires_in ?? 2_592_000) * 1000;
+  return cachedToken;
+}
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-
   if (req.method !== "POST") {
-    return new Response("Method Not Allowed", {
-      status: 405,
-      headers: corsHeaders,
-    });
+    return jsonResponse({ error: "Method Not Allowed" }, 405);
   }
 
   let speech: string;
@@ -27,65 +73,78 @@ serve(async (req: Request): Promise<Response> => {
   let format: string;
   let rate: number;
   let cuid: string;
-  let dev_pid: number;
+  let devPid: number;
 
   try {
     const body = await req.json();
     speech = body.speech;
     len = body.len;
-    format = body.format ?? "wav";
-    rate = body.rate ?? 16000;
-    cuid = body.cuid ?? "miaoda-edge-cuid";
-    // 方言 dev_pid：默认普通话 1537，前端可传入其他方言值
-    dev_pid = VALID_DEV_PIDS.has(body.dev_pid) ? body.dev_pid : 1537;
+    format = String(body.format ?? "wav").toLowerCase();
+    rate = Number(body.rate ?? 16000);
+    cuid = String(body.cuid ?? "shiguang-web").slice(0, 60);
+    devPid = Number(body.dev_pid ?? 1537);
 
-    if (!speech) throw new Error("Missing speech");
-    if (typeof len !== "number" || len <= 0) throw new Error("Missing or invalid len");
+    if (typeof speech !== "string" || !speech) throw new Error("Missing speech");
+    if (!Number.isInteger(len) || len <= 0 || len > MAX_AUDIO_BYTES) {
+      throw new Error("Invalid len");
+    }
+    if (!VALID_FORMATS.has(format)) throw new Error("Invalid format");
+    if (!VALID_RATES.has(rate)) throw new Error("Invalid rate");
+    if (!VALID_DEV_PIDS.has(devPid)) throw new Error("Invalid dev_pid");
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid request body" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const apiKey = Deno.env.get("INTEGRATIONS_API_KEY");
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const upstream = await fetch(
-    "https://app-d04hti6zlz42-api-Aa2PZnjEw5NL-gateway.appmiaoda.com/server_api",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Gateway-Authorization": `Bearer ${apiKey}`,
+    return jsonResponse(
+      {
+        error: "Invalid request body",
+        detail: "speech、len 必填；format 支持 pcm/wav/amr/m4a；rate 支持 8000/16000",
       },
-      body: JSON.stringify({ format, rate, cuid, speech, len, dev_pid }),
-    },
-  );
-
-  if (upstream.status === 429 || upstream.status === 402) {
-    const errText = await upstream.text();
-    return new Response(errText, {
-      status: upstream.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  if (!upstream.ok) {
-    return new Response(
-      JSON.stringify({ error: `Upstream error: ${upstream.status}` }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      400,
     );
   }
 
-  const data = await upstream.json();
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  try {
+    const token = await getAccessToken();
+    const upstream = await fetch(ASR_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        format,
+        rate,
+        channel: 1,
+        cuid,
+        token,
+        dev_pid: devPid,
+        speech,
+        len,
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+
+    const responseText = await upstream.text();
+    if (!upstream.ok) {
+      console.error("[baidu-asr] 上游 HTTP 错误", {
+        status: upstream.status,
+        body: responseText.slice(0, 500),
+      });
+      return jsonResponse({ error: `Baidu ASR HTTP ${upstream.status}` }, 502);
+    }
+
+    return new Response(responseText, { status: 200, headers: jsonHeaders });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "UNKNOWN";
+    console.error("[baidu-asr] 请求失败", message);
+
+    if (message === "BAIDU_CREDENTIALS_MISSING") {
+      return jsonResponse(
+        { error: "Server configuration error", detail: "缺少百度语音 API 密钥" },
+        500,
+      );
+    }
+    if (message === "BAIDU_AUTH_FAILED") {
+      return jsonResponse(
+        { error: "Baidu authentication failed", detail: "请检查 API Key、Secret Key 和语音服务权限" },
+        502,
+      );
+    }
+    return jsonResponse({ error: "Baidu ASR request failed" }, 502);
+  }
 });

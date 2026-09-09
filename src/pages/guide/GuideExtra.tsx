@@ -17,15 +17,33 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
-import { fetchSubtitlesSafe } from '@/api/subtitles';
-import { fetchRoomMemberHistory } from '@/api/profiles';
+import { fetchAllSubtitles } from '@/api/subtitles';
+import { fetchRoomMemberHistory, fetchRoomMembersSafe } from '@/api/profiles';
 import { RoomPresenceProvider, useRoomPresence } from '@/hooks/use-room-presence';
 import { ScenicCardShell } from '@/pages/cards/CardScreens';
+import { RoomCoverCropModal } from '@/components/RoomCoverCropModal';
+import { uploadCardImageBlob } from '@/api/cardImage';
 
 import type { Subtitle, KnowledgeCard, RoomMember } from '@/types/types';
 import { toast } from 'sonner';
 
 interface Props { go: (id: string) => void }
+interface GuestListProps extends Props {
+  initialMembers?: RoomMember[];
+  presenceProvided?: boolean;
+}
+interface GuideSubtitleRecordProps extends Props { initialSubtitles?: Subtitle[] }
+
+function markGuideSubtitlesSeen(roomId: string, seenAt = Date.now()) {
+  try {
+    localStorage.setItem(`shiguang-guide-subtitle-seen-${roomId}`, String(seenAt));
+  } catch {
+    // 本地存储不可用时仍通知当前页面内的讲解控制台清零。
+  }
+  window.dispatchEvent(new CustomEvent('shiguang-guide-subtitles-seen', {
+    detail: { roomId, seenAt },
+  }));
+}
 
 // ─── 通用头像 ─────────────────────────────────────────
 function Avatar({ url, className = '' }: { url?: string | null; className?: string }) {
@@ -47,8 +65,8 @@ function RoleBadge({ role }: { role: string }) {
 // ─── G06 游客列表 ─────────────────────────────────────
 /**
  * GuestList 内层组件：依赖 RoomPresenceProvider，可直接消费 useRoomPresence。
- * 历史成员来自 get_room_member_history_safe RPC（全量 tourist，不过滤 left_at）；
- * 在线状态来自 Presence onlineTouristIds（唯一真值，不依赖 left_at）。
+ * 历史成员合并 room_members 与 approved memberships，排除导游并按 user_id 去重；
+ * 在线状态来自 Presence onlineParticipantIds（唯一真值，不依赖 left_at）。
  *
  * v379 修复：
  *   - 等待 user 就绪（auth.uid() 有效）再发请求，避免 RPC not_authenticated；
@@ -59,10 +77,10 @@ function RoleBadge({ role }: { role: string }) {
  *   - 前端过滤 user_id === guide_id 的脏行（不修改数据库）；
  *   - 可检索日志：[GuestListHistory] start/retry/success/error。
  */
-function GuestListInner({ go }: Props) {
+function GuestListInner({ go, initialMembers = [] }: GuestListProps) {
   const { currentRoom, user, loading: authLoading } = useAuth();
-  const { onlineTouristIds, touristCount } = useRoomPresence();
-  const [members, setMembers] = useState<RoomMember[]>([]);
+  const { onlineParticipantIds, participantCount } = useRoomPresence();
+  const [members, setMembers] = useState<RoomMember[]>(initialMembers);
   const [search, setSearch] = useState('');
   // 'idle' | 'loading' | 'success' | 'error'
   const [loadState, setLoadState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -71,6 +89,13 @@ function GuestListInner({ go }: Props) {
   const [retryTick, setRetryTick] = useState(0);
   // 取消标记：roomId/user 变化时置 true，旧飞行中请求到达后丢弃结果
   const cancelRef = useRef(false);
+
+  useEffect(() => {
+    if (initialMembers.length === 0) return;
+    setMembers(current => Array.from(
+      new Map([...current, ...initialMembers].map(member => [member.id, member])).values(),
+    ));
+  }, [initialMembers]);
 
   // 是否为可重试的瞬时错误（session 尚未恢复 / 网络）
   const isRetryable = (msg: string) =>
@@ -122,12 +147,23 @@ function GuestListInner({ go }: Props) {
           await new Promise(r => setTimeout(r, delay));
           if (!cancelled) load(attempt + 1);
         } else {
-          setLoadState('error');
-          setErrorMsg(
-            msg.includes('permission_denied')
-              ? '权限不足，无法加载游客列表'
-              : '加载失败，请点击重试'
-          );
+          // 完整历史读取失败时只显示明确错误，不把当前成员伪装成历史成员。
+          try {
+            const fallbackRows = await fetchRoomMembersSafe(roomId);
+            if (cancelled) return;
+            if (fallbackRows.length > 0) {
+              setMembers(fallbackRows.filter(member => member.role !== 'guide'));
+            }
+            setLoadState('error');
+            setErrorMsg('历史成员加载失败，请点击重试');
+          } catch {
+            setLoadState('error');
+            setErrorMsg(
+              msg.includes('permission_denied')
+                ? '权限不足，无法加载游客列表'
+                : '加载失败，请点击重试'
+            );
+          }
         }
       }
     };
@@ -159,7 +195,7 @@ function GuestListInner({ go }: Props) {
   const historyCount = cleanMembers.length;
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen guest-list-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('guide-live')} aria-label="返回">
           <span className="back-chevron" />
@@ -170,13 +206,13 @@ function GuestListInner({ go }: Props) {
 
       <div className="member-stats-row">
         {/* 在线人数：Presence 唯一来源 */}
-        <div className="member-stat"><b>{touristCount}</b><small>在线</small></div>
+        <div className="member-stat"><b>{participantCount}</b><small>在线</small></div>
         {/* 历史人数：排脏后历史成员数（含已退出） */}
         <div className="member-stat"><b>{historyCount}</b><small>历史人数</small></div>
       </div>
 
       <div className="member-tab-row">
-        <button className="active">全部成员</button>
+        <button className="active" aria-pressed="true">全部成员</button>
       </div>
 
       <div className="member-search-wrap">
@@ -212,7 +248,7 @@ function GuestListInner({ go }: Props) {
       ) : (
         <div className="member-list">
           {filtered.map(m => {
-            const isOnline = onlineTouristIds.has(m.user_id);
+            const isOnline = onlineParticipantIds.has(m.user_id);
             const profile = m.profile as { nickname?: string | null; username?: string; avatar_url?: string | null } | undefined;
             return (
               <div key={m.id} className="member-item">
@@ -220,6 +256,7 @@ function GuestListInner({ go }: Props) {
                 <div className="member-info">
                   <span className="member-name">
                     {profile?.nickname ?? profile?.username ?? '用户'}
+                    <RoleBadge role={m.role} />
                   </span>
                   <div className="member-meta">
                     <span className="member-join-time">
@@ -248,27 +285,55 @@ function GuestListInner({ go }: Props) {
  * GuestList 外层：挂载导游侧 Presence 订阅（仅订阅，不 track，role='guide'）。
  * 导游不计入游客人数；Presence 仅用于读取 tourist 在线集合。
  */
-export function GuestList({ go }: Props) {
+export function GuestList({ go, initialMembers, presenceProvided = false }: GuestListProps) {
   const { currentRoom, user } = useAuth();
+  if (presenceProvided) {
+    return <GuestListInner go={go} initialMembers={initialMembers} />;
+  }
   return (
     <RoomPresenceProvider
       roomId={currentRoom?.id ?? ''}
       userId={user?.id ?? ''}
       role="guide"
     >
-      <GuestListInner go={go} />
+      <GuestListInner go={go} initialMembers={initialMembers} />
     </RoomPresenceProvider>
   );
 }
 
 // ─── G07 导游字幕记录 ─────────────────────────────────
-export function GuideSubtitleRecord({ go }: Props) {
-  const { currentRoom } = useAuth();
-  const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+export function GuideSubtitleRecord({
+  go,
+  initialSubtitles = [],
+}: GuideSubtitleRecordProps) {
+  const { currentRoom, user } = useAuth();
+  const sortNewestFirst = (items: Subtitle[]) =>
+    [...items].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const mergeSubtitles = (current: Subtitle[], incoming: Subtitle[]) =>
+    sortNewestFirst(Array.from(
+      new Map([...current, ...incoming].map(item => [item.id, item])).values(),
+    ));
+  const scopedInitialSubtitles = currentRoom
+    ? initialSubtitles.filter(item => item.room_id === currentRoom.id)
+    : [];
+  const [subtitles, setSubtitles] = useState<Subtitle[]>(() => sortNewestFirst(scopedInitialSubtitles));
+  const [loadingSubtitles, setLoadingSubtitles] = useState(true);
 
   useEffect(() => {
     if (!currentRoom) return;
-    fetchSubtitlesSafe(currentRoom.id, 50).then(s => setSubtitles([...s].reverse()));
+    markGuideSubtitlesSeen(currentRoom.id);
+    if (scopedInitialSubtitles.length > 0) {
+      setSubtitles(current => mergeSubtitles(current, scopedInitialSubtitles));
+    }
+    const load = async () => {
+      setLoadingSubtitles(true);
+      const rows = await fetchAllSubtitles(currentRoom.id, user?.id);
+      if (rows.length > 0) {
+        setSubtitles(current => mergeSubtitles(current, rows));
+      }
+      setLoadingSubtitles(false);
+    };
+    void load();
     // 复用 GuideScreens 已有的 guide-live channel 通过 shiguang-local-subtitle
     // CustomEvent 广播的字幕，不再单独开 subtitles Realtime channel，
     // 避免额外占用数据库连接配额（修复 DatabaseLackOfConnections）
@@ -277,13 +342,19 @@ export function GuideSubtitleRecord({ go }: Props) {
       if (!subtitle || subtitle.room_id !== currentRoom.id) return;
       setSubtitles(prev => [...prev.filter(item => item.id !== subtitle.id), subtitle]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      markGuideSubtitlesSeen(currentRoom.id);
     };
     window.addEventListener('shiguang-local-subtitle', onLocal);
     return () => { window.removeEventListener('shiguang-local-subtitle', onLocal); };
-  }, [currentRoom?.id]);
+  }, [currentRoom?.id, user?.id]);
+
+  useEffect(() => {
+    if (scopedInitialSubtitles.length === 0) return;
+    setSubtitles(current => mergeSubtitles(current, scopedInitialSubtitles));
+  }, [initialSubtitles, currentRoom?.id]);
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen guide-subtitle-record-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('guide-live')} aria-label="返回">
           <span className="back-chevron" />
@@ -292,9 +363,15 @@ export function GuideSubtitleRecord({ go }: Props) {
         <span />
       </div>
 
-      <p className="guide-subtitle-note">以下为本次讲解的实时字幕，仅供导游确认，不影响游客显示设置。</p>
+      <p className="guide-subtitle-note">
+        以下为本次讲解的全部字幕，共 {subtitles.length} 条；实时讲解页仅保留最新 50 条。
+      </p>
 
-      {subtitles.length === 0 ? (
+      {loadingSubtitles && subtitles.length === 0 ? (
+        <div className="empty-state">
+          <p className="empty-title">正在加载全部字幕…</p>
+        </div>
+      ) : subtitles.length === 0 ? (
         <div className="empty-state">
           <BookOpen size={40} className="empty-icon" />
           <p className="empty-title">暂无字幕记录</p>
@@ -335,17 +412,27 @@ export function KnowledgeCardLib({ go }: Props) {
   const backTarget = sessionStorage.getItem('kc_library_from') ?? 'my';
 
   const loadCards = async () => {
-    const q = supabase
+    if (!user?.id) {
+      setCards([]);
+      return;
+    }
+    let q = supabase
       .from('knowledge_cards')
       .select('*')
+      .eq('created_by', user.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
-    if (category !== '全部') q.eq('category', category);
-    const { data } = await q;
+    if (category !== '全部') q = q.eq('category', category);
+    const { data, error } = await q;
+    if (error) {
+      toast.error(`卡片加载失败：${error.message}`);
+      setCards([]);
+      return;
+    }
     setCards((data ?? []) as KnowledgeCard[]);
   };
 
-  useEffect(() => { loadCards(); }, [category]);
+  useEffect(() => { void loadCards(); }, [category, user?.id]);
 
   // 从 card-library 编辑跳转过来时，自动定位并打开编辑弹窗
   useEffect(() => {
@@ -370,21 +457,26 @@ export function KnowledgeCardLib({ go }: Props) {
     : cards;
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !user?.id) return;
     setDeleteBusy(true);
-    const { error } = await supabase
+    const targetId = deleteId;
+    const { data, error } = await supabase
       .from('knowledge_cards')
       .update({ deleted_at: new Date().toISOString() })
-      .eq('id', deleteId);
+      .eq('id', targetId)
+      .eq('created_by', user.id)
+      .select('id')
+      .maybeSingle();
     setDeleteBusy(false);
     setDeleteId(null);
     if (error) { toast.error('删除失败：' + error.message); return; }
+    if (!data) { toast.error('删除失败：卡片不存在或不属于当前导游'); return; }
     toast.success('卡片已下架（软删除）');
-    setCards(prev => prev.filter(c => c.id !== deleteId));
+    setCards(prev => prev.filter(c => c.id !== targetId));
   };
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen kc-library-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go(backTarget)} aria-label="返回">
           <span className="back-chevron" />
@@ -521,24 +613,89 @@ export function KnowledgeCardEditModal({ card, onClose, onSaved, userId }: EditM
     category: card.category ?? '景点导览',
     era: card.era ?? '',
     location: card.location ?? '',
-    image_url: card.image_url ?? '',
     status: card.status ?? 'published',
   });
   const [busy, setBusy] = useState(false);
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(card.image_url ?? null);
+  const [imageRemoved, setImageRemoved] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const cardIdRef = useRef(card.id ?? crypto.randomUUID());
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+  }, [cropSrc, imagePreview]);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('请选择 JPG、PNG 或 WebP 格式的图片');
+      return;
+    }
+    setCropSrc(current => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+  };
+
+  const handleCropConfirm = (blob: Blob) => {
+    setImagePreview(current => {
+      if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
+      return URL.createObjectURL(blob);
+    });
+    setImageBlob(blob);
+    setImageRemoved(false);
+    setCropSrc(current => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  };
+
+  const handleCropCancel = () => {
+    setCropSrc(current => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(current => {
+      if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
+      return null;
+    });
+    setImageBlob(null);
+    setImageRemoved(true);
+  };
 
   const handleSave = async (status: 'draft' | 'published') => {
     if (!form.title_cn) { toast.error('请填写中文标题'); return; }
     if (!form.desc_cn) { toast.error('请填写中文描述'); return; }
     setBusy(true);
-    const payload = { ...form, status, created_by: userId };
+    const cardId = cardIdRef.current;
+    let imageUrl = imageRemoved ? null : (card.image_url ?? null);
+    if (imageBlob) {
+      const upload = await uploadCardImageBlob(userId, cardId, imageBlob);
+      if (!upload.url) {
+        setBusy(false);
+        toast.error(`图片上传失败：${upload.error ?? '请稍后重试'}`);
+        return;
+      }
+      imageUrl = upload.url;
+    }
+    const payload = { ...form, status, image_url: imageUrl };
     if (card.id) {
       // UPDATE：按 id 更新原记录，绝不插入新行
       const { data, error } = await supabase
         .from('knowledge_cards')
         .update(payload)
         .eq('id', card.id)
+        .eq('created_by', userId)
         .select()
         .single();
       setBusy(false);
@@ -546,7 +703,9 @@ export function KnowledgeCardEditModal({ card, onClose, onSaved, userId }: EditM
       toast.success(status === 'draft' ? '已保存草稿' : '卡片已发布');
       onSaved(data as KnowledgeCard);
     } else {
-      const { error } = await supabase.from('knowledge_cards').insert(payload);
+      const { error } = await supabase
+        .from('knowledge_cards')
+        .insert({ id: cardId, ...payload, created_by: userId });
       setBusy(false);
       if (error) { toast.error('保存失败：' + error.message); return; }
       toast.success(status === 'draft' ? '已保存草稿' : '卡片已发布');
@@ -595,9 +754,38 @@ export function KnowledgeCardEditModal({ card, onClose, onSaved, userId }: EditM
             <label>地点</label>
             <input className="profile-input" value={form.location} onChange={e => set('location', e.target.value)} placeholder="如：北京故宫" />
           </div>
-          <div className="kc-field">
-            <label>图片 URL（选填）</label>
-            <input className="profile-input" value={form.image_url} onChange={e => set('image_url', e.target.value)} placeholder="https://…" />
+          <div className="kc-field kc-image-field">
+            <label>卡片图片（选填）</label>
+            <button
+              type="button"
+              className={`kc-image-upload${imagePreview ? ' has-image' : ''}`}
+              onClick={() => imageInputRef.current?.click()}
+              disabled={busy}
+              aria-label={imagePreview ? '更换卡片图片' : '上传卡片图片'}
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="卡片图片预览" />
+              ) : (
+                <span className="kc-image-upload-empty">
+                  <ImagePlus size={26} />
+                  <strong>选择卡片图片</strong>
+                  <small>支持 JPG、PNG、WebP，上传前可裁剪</small>
+                </span>
+              )}
+              {imagePreview && <span className="kc-image-upload-mask"><ImagePlus size={18} />更换图片</span>}
+            </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={handleImageChange}
+            />
+            {imagePreview && (
+              <button type="button" className="kc-image-remove" onClick={handleRemoveImage} disabled={busy}>
+                移除图片
+              </button>
+            )}
           </div>
           <div className="kc-edit-actions">
             <button className="kc-draft-btn" onClick={() => handleSave('draft')} disabled={busy}>保存草稿</button>
@@ -606,6 +794,14 @@ export function KnowledgeCardEditModal({ card, onClose, onSaved, userId }: EditM
             </button>
           </div>
         </div>
+        {cropSrc && (
+          <RoomCoverCropModal
+            src={cropSrc}
+            title="裁剪卡片图片"
+            onConfirm={handleCropConfirm}
+            onCancel={handleCropCancel}
+          />
+        )}
       </div>
     </div>,
     appRoot
@@ -632,7 +828,7 @@ export function KnowledgeCardDetail({ go }: Props) {
   const langMode = (profile as unknown as Record<string,unknown>)?.default_language ?? 'cn';
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen kc-detail-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go(backTarget)} aria-label="返回">
           <span className="back-chevron" />

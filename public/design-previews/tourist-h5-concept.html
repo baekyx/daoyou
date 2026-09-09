@@ -1,0 +1,1097 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f5ef" />
+  <link rel="icon" href="../favicon.png" />
+  <title>拾光旅伴 · 游客端 H5 设计预览</title>
+  <!--
+    设计假设：
+    1. 保留现有暖白背景和品牌墨绿，不改变游客端业务功能。
+    2. 核心任务是“找到房间 → 输入密码 → 加入讲解”，常用操作优先。
+    3. 使用统一线性图标、8px 间距体系、18px 卡片圆角和明确状态色。
+    4. 此文件是独立设计原型，不读取接口、不修改生产数据。
+    5. 房间页顶部以“旅途中的人物走到前景”为视觉母题，建立文案、氛围与人物的前后层级。
+  -->
+  <style>
+    :root {
+      --bg: #f7f5ef;
+      --surface: #fffefa;
+      --surface-strong: #ffffff;
+      --ink: #163629;
+      --muted: #708078;
+      --muted-soft: #9aaba2;
+      --brand: #147a4b;
+      --brand-strong: #0f653d;
+      --brand-soft: #e6f2eb;
+      --brand-faint: #f1f7f3;
+      --line: #d9e3dc;
+      --danger: #c74242;
+      --warning: #a06412;
+      --shadow: 0 12px 30px rgba(26, 62, 44, 0.08);
+      --font: "SF Pro Display", "SF Pro Text", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 70% 8%, rgba(212, 233, 219, 0.48), transparent 26rem),
+        #e8efea;
+      color: var(--ink);
+      font-family: var(--font);
+      font-synthesis: none;
+      line-break: strict;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    button:focus { outline: none; }
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(20, 122, 75, 0.24);
+      outline-offset: 2px;
+    }
+
+    .preview-wrap {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+    }
+
+    .app {
+      position: relative;
+      width: min(100vw, 430px);
+      height: 100dvh;
+      min-height: 680px;
+      overflow: hidden;
+      background: var(--bg);
+      box-shadow: 0 22px 70px rgba(20, 57, 39, 0.18);
+      isolation: isolate;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: max(18px, env(safe-area-inset-top)) 20px calc(104px + env(safe-area-inset-bottom));
+      scrollbar-width: none;
+    }
+
+    .screen::-webkit-scrollbar { display: none; }
+    .screen.active { display: block; animation: screen-in 180ms ease-out; }
+    .screen.subpage { padding-bottom: calc(30px + env(safe-area-inset-bottom)); }
+
+    @keyframes screen-in {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      color: var(--brand);
+      font-size: 14px;
+      font-weight: 720;
+    }
+
+    .eyebrow svg { width: 19px; height: 19px; stroke-width: 1.9; }
+
+    .page-heading {
+      margin: 10px 0 0;
+      font-size: 32px;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      text-wrap: balance;
+    }
+
+    .page-intro {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+      text-wrap: pretty;
+    }
+
+    .welcome-hero {
+      position: relative;
+      min-height: 194px;
+      display: grid;
+      grid-template-columns: minmax(0, 58%) 42%;
+      align-items: center;
+      margin: -4px -8px 10px;
+      padding: 26px 8px 22px 20px;
+      isolation: isolate;
+      overflow: visible;
+    }
+
+    .welcome-hero::before {
+      content: "";
+      position: absolute;
+      z-index: -3;
+      inset: 10px 0 8px;
+      border: 1px solid rgba(139, 184, 157, 0.2);
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 88% 22%, rgba(255, 255, 255, 0.88) 0 12%, transparent 34%),
+        linear-gradient(118deg, #edf7f0 0%, #dbeee1 58%, #c8e3d1 100%);
+      box-shadow: 0 16px 34px rgba(43, 103, 68, 0.08);
+    }
+
+    .welcome-hero::after {
+      content: "";
+      position: absolute;
+      z-index: 3;
+      right: -2px;
+      bottom: 7px;
+      width: 168px;
+      height: 42px;
+      border-radius: 50% 0 24px 50%;
+      background: linear-gradient(180deg, rgba(221, 239, 226, 0), rgba(183, 218, 194, 0.72));
+      filter: blur(0.2px);
+      pointer-events: none;
+    }
+
+    .welcome-text {
+      position: relative;
+      z-index: 4;
+      align-self: center;
+      padding-bottom: 2px;
+    }
+
+    .welcome-copy {
+      margin: 0 0 10px;
+      color: #3f6e57;
+      font-size: 14px;
+      font-weight: 720;
+      line-height: 1.4;
+    }
+
+    .welcome-hero h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 34px;
+      font-weight: 790;
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
+    }
+
+    .welcome-note {
+      max-width: 216px;
+      margin: 11px 0 0;
+      color: #5f7569;
+      font-size: 14px;
+      line-height: 1.58;
+      text-wrap: pretty;
+    }
+
+    .welcome-person {
+      position: absolute;
+      z-index: 2;
+      right: -12px;
+      bottom: 0;
+      width: 194px;
+      height: 218px;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .welcome-person::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      right: 15px;
+      bottom: 22px;
+      width: 144px;
+      height: 144px;
+      border-radius: 49% 51% 45% 55% / 53% 42% 58% 47%;
+      background: rgba(246, 251, 247, 0.72);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.68);
+    }
+
+    .welcome-person > img {
+      position: absolute;
+      z-index: 1;
+      right: 0;
+      bottom: -56px;
+      width: 184px;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 14px 18px rgba(31, 72, 49, 0.16));
+    }
+
+    .simple-page-header {
+      margin: 10px 0 24px;
+    }
+
+    .simple-page-header .page-heading {
+      margin-top: 0;
+    }
+
+    .search {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      align-items: center;
+      gap: 10px;
+      height: 52px;
+      margin-top: 14px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 7px 20px rgba(24, 68, 45, 0.04);
+      backdrop-filter: blur(14px);
+    }
+
+    .search:focus-within {
+      border-color: rgba(20, 122, 75, 0.55);
+      box-shadow: 0 0 0 3px rgba(20, 122, 75, 0.1);
+    }
+
+    .search svg { width: 21px; color: var(--muted); }
+    .search input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 16px;
+    }
+    .search input::placeholder { color: var(--muted-soft); }
+
+    .section-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 24px 2px 12px;
+    }
+
+    .section-title-row h2 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.4;
+    }
+
+    .section-title-row span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .room-list { display: grid; gap: 12px; }
+
+    .room-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr) 22px;
+      gap: 14px;
+      align-items: center;
+      min-height: 126px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface-strong);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 8px 22px rgba(26, 62, 44, 0.055);
+      transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    }
+
+    .room-card:active { transform: scale(0.985); }
+    .room-card:hover {
+      border-color: rgba(20, 122, 75, 0.34);
+      box-shadow: 0 12px 28px rgba(26, 62, 44, 0.09);
+    }
+
+    .room-cover {
+      position: relative;
+      width: 94px;
+      height: 102px;
+      overflow: hidden;
+      border-radius: 14px;
+      background: var(--brand-soft);
+    }
+
+    .room-cover img {
+      position: absolute;
+      max-width: none;
+      height: auto;
+      display: block;
+    }
+
+    .cover-palace img {
+      width: 280px;
+      transform: translate(-93px, -101px);
+    }
+
+    .cover-gate img {
+      width: 435px;
+      transform: translate(-170px, -306px);
+    }
+
+    .room-main { min-width: 0; align-self: stretch; padding: 5px 0; }
+
+    .room-title-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .room-title {
+      overflow: hidden;
+      margin: 0;
+      font-size: 19px;
+      font-weight: 760;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .status {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 26px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .status::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 3px rgba(20, 122, 75, 0.1);
+    }
+
+    .room-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .room-meta span + span::before {
+      content: "·";
+      margin-right: 6px;
+      color: #a4b0aa;
+    }
+
+    .guide-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 12px;
+      color: #4d6257;
+      font-size: 13px;
+    }
+
+    .guide-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--brand-soft);
+    }
+
+    .chevron { color: var(--muted); }
+    .chevron svg { width: 20px; height: 20px; stroke-width: 1.8; }
+
+    .empty-state {
+      min-height: calc(100dvh - 300px);
+      display: grid;
+      place-items: center;
+      padding-bottom: 60px;
+      text-align: center;
+    }
+
+    .empty-content { max-width: 280px; }
+
+    .empty-orbit {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: var(--brand-faint);
+      color: var(--brand);
+    }
+
+    .empty-orbit::before,
+    .empty-orbit::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: #d3e7da;
+    }
+
+    .empty-orbit::before { width: 9px; height: 9px; top: 5px; right: 8px; }
+    .empty-orbit::after { width: 6px; height: 6px; bottom: 14px; left: 0; }
+    .empty-orbit svg { width: 42px; height: 42px; stroke-width: 1.55; }
+
+    .empty-content h2 { margin: 0; font-size: 21px; }
+    .empty-content p {
+      margin: 10px 0 22px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .primary-button {
+      min-height: 50px;
+      padding: 0 24px;
+      border: 0;
+      border-radius: 15px;
+      background: var(--brand);
+      color: white;
+      font-weight: 740;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(20, 122, 75, 0.18);
+      transition: transform 150ms ease, background 150ms ease, opacity 150ms ease;
+    }
+
+    .primary-button:active { transform: scale(0.98); }
+    .primary-button:hover { background: var(--brand-strong); }
+    .primary-button:disabled {
+      background: #c2d2c8;
+      color: rgba(255, 255, 255, 0.9);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .profile-head {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 16px;
+      align-items: center;
+      margin: 0 0 24px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .profile-avatar-wrap { position: relative; width: 72px; height: 72px; }
+
+    .profile-avatar {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 8px 20px rgba(20, 80, 48, 0.12);
+    }
+
+    .camera-badge {
+      position: absolute;
+      right: -2px;
+      bottom: 0;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border: 2px solid white;
+      border-radius: 50%;
+      background: var(--brand);
+      color: white;
+    }
+
+    .camera-badge svg { width: 14px; height: 14px; }
+    .profile-copy h2 { margin: 0 0 7px; font-size: 22px; }
+
+    .role-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--brand);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .role-pill svg { width: 15px; height: 15px; }
+
+    .settings-group {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface-strong);
+      box-shadow: 0 10px 28px rgba(26, 62, 44, 0.05);
+    }
+
+    .settings-label {
+      margin: 22px 4px 9px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+      letter-spacing: 0.04em;
+    }
+
+    .setting-row {
+      width: 100%;
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto 18px;
+      align-items: center;
+      gap: 11px;
+      padding: 0 16px;
+      border: 0;
+      border-bottom: 1px solid #edf1ee;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .setting-row:last-child { border-bottom: 0; }
+    .setting-row:active { background: var(--brand-faint); }
+
+    .setting-icon {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--brand-faint);
+      color: var(--brand);
+    }
+    .setting-icon svg { width: 19px; height: 19px; stroke-width: 1.8; }
+    .setting-name { font-size: 15px; font-weight: 690; }
+    .setting-value { color: var(--muted); font-size: 13px; }
+    .setting-row > svg { width: 17px; color: #a9b7af; }
+
+    .logout {
+      width: 100%;
+      min-height: 50px;
+      margin-top: 18px;
+      border: 1px solid #e5c9c9;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--danger);
+      font-weight: 680;
+      cursor: pointer;
+    }
+
+    .subpage-header {
+      position: relative;
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: center;
+      margin: -2px -4px 26px;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .icon-button:active { background: var(--brand-soft); }
+    .icon-button svg { width: 25px; height: 25px; stroke-width: 1.9; }
+    .subpage-header h1 { margin: 0; text-align: center; font-size: 20px; }
+
+    .join-summary {
+      display: grid;
+      grid-template-columns: 62px 1fr;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface-strong);
+      box-shadow: var(--shadow);
+    }
+
+    .join-thumb {
+      position: relative;
+      width: 62px;
+      height: 62px;
+      overflow: hidden;
+      border-radius: 15px;
+      background: var(--brand-soft);
+    }
+    .join-thumb img {
+      position: absolute;
+      width: 185px;
+      max-width: none;
+      height: auto;
+      display: block;
+      transform: translate(-61px, -67px);
+    }
+
+    .join-summary h2 { margin: 0; font-size: 19px; }
+    .join-summary p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+
+    .join-form { margin-top: 34px; }
+    .field-label { margin: 0 0 12px; font-size: 14px; font-weight: 680; }
+    .field-help { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+
+    .pin-wrap { position: relative; }
+    .pin-input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      opacity: 0;
+      cursor: text;
+    }
+
+    .pin-boxes {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .pin-box {
+      aspect-ratio: 1 / 1.08;
+      display: grid;
+      place-items: center;
+      border: 1px solid #b9d2c3;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--ink);
+      font-size: 24px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    }
+
+    .pin-box.filled { background: white; border-color: #8dbaa0; }
+    .pin-box.active {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(20, 122, 75, 0.12);
+    }
+
+    .join-submit { width: 100%; margin-top: 22px; }
+
+    .join-security {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin-top: 18px;
+      padding: 13px 14px;
+      border-radius: 14px;
+      background: var(--brand-faint);
+      color: #5b7165;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .join-security svg { flex: none; width: 17px; height: 17px; margin-top: 1px; color: var(--brand); }
+
+    .bottom-nav {
+      position: absolute;
+      z-index: 20;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      min-height: calc(76px + env(safe-area-inset-bottom));
+      padding: 8px 14px env(safe-area-inset-bottom);
+      border-top: 1px solid rgba(212, 222, 215, 0.9);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav-item {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      min-width: 64px;
+      min-height: 58px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: #7d8782;
+      cursor: pointer;
+    }
+    .nav-item svg { width: 23px; height: 23px; stroke-width: 1.8; }
+    .nav-item span { font-size: 12px; font-weight: 650; }
+    .nav-item.active { color: var(--brand); }
+    .nav-item.active svg { stroke-width: 2.1; }
+
+    .toast {
+      position: absolute;
+      z-index: 50;
+      right: 20px;
+      bottom: calc(92px + env(safe-area-inset-bottom));
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 11px 14px;
+      border-radius: 14px;
+      background: rgba(19, 51, 37, 0.94);
+      color: white;
+      font-size: 13px;
+      box-shadow: 0 14px 35px rgba(9, 35, 23, 0.25);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast svg { flex: none; width: 18px; height: 18px; }
+
+    .design-note {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: calc(50% + 250px);
+      width: 270px;
+      transform: translateY(-50%);
+      color: #315042;
+    }
+    .design-note h2 { margin: 0 0 10px; font-size: 24px; }
+    .design-note p { margin: 0 0 16px; color: #61776c; font-size: 14px; line-height: 1.7; }
+    .design-note ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .design-note li { display: flex; gap: 9px; font-size: 13px; line-height: 1.5; }
+    .design-note li::before {
+      content: "";
+      flex: none;
+      width: 7px;
+      height: 7px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: var(--brand);
+    }
+
+    @media (min-width: 980px) {
+      .preview-wrap { transform: translateX(-150px); }
+      .app { height: min(880px, calc(100dvh - 36px)); border-radius: 28px; }
+      .design-note { display: block; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-wrap">
+    <section class="app" aria-label="游客端 H5 设计原型">
+      <article class="screen active" data-screen="rooms">
+        <header class="welcome-hero">
+          <div class="welcome-text">
+            <p class="welcome-copy">你好，旅行者 👋</p>
+            <h1>发现讲解</h1>
+            <p class="welcome-note">选择正在进行的房间，开始实时收听。</p>
+          </div>
+          <div class="welcome-person">
+            <img src="./assets/tourist-hero-cutout.png" alt="游客人物形象" />
+          </div>
+        </header>
+
+        <label class="search">
+          <i data-lucide="search"></i>
+          <input id="room-search" type="search" placeholder="搜索房间名称或房间号" autocomplete="off" />
+        </label>
+
+        <div class="section-title-row">
+          <h2>正在讲解</h2>
+          <span id="room-count">2 个房间</span>
+        </div>
+
+        <div class="room-list" id="room-list">
+          <button class="room-card" type="button" data-room="故宫文化探索团" data-number="978525">
+            <span class="room-cover cover-palace">
+              <img src="../ui-source/create-room.webp" alt="故宫建筑房间封面" />
+            </span>
+            <span class="room-main">
+              <span class="room-title-line">
+                <span class="room-title">故宫文化探索团</span>
+                <span class="status">讲解中</span>
+              </span>
+              <span class="room-meta"><span>978525</span><span>12 人在线</span></span>
+              <span class="guide-row">
+                <img class="guide-avatar" src="../avatars/male-guide.webp" alt="" />
+                <span>风芯子</span>
+              </span>
+            </span>
+            <span class="chevron"><i data-lucide="chevron-right"></i></span>
+          </button>
+
+          <button class="room-card" type="button" data-room="午门建筑漫游" data-number="401640">
+            <span class="room-cover cover-gate">
+              <img src="../ui-source/room-success.webp" alt="午门建筑房间封面" />
+            </span>
+            <span class="room-main">
+              <span class="room-title-line">
+                <span class="room-title">午门建筑漫游</span>
+                <span class="status">讲解中</span>
+              </span>
+              <span class="room-meta"><span>401640</span><span>6 人在线</span></span>
+              <span class="guide-row">
+                <img class="guide-avatar" src="../avatars/male-guide.webp" alt="" />
+                <span>薛少杰</span>
+              </span>
+            </span>
+            <span class="chevron"><i data-lucide="chevron-right"></i></span>
+          </button>
+        </div>
+      </article>
+
+      <article class="screen" data-screen="recent">
+        <header class="simple-page-header">
+          <h1 class="page-heading">最近记录</h1>
+          <p class="page-intro">重新进入有效房间，或回看已保存的字幕。</p>
+        </header>
+        <div class="empty-state">
+          <div class="empty-content">
+            <div class="empty-orbit"><i data-lucide="route"></i></div>
+            <h2>旅程从第一次加入开始</h2>
+            <p>你加入过的房间会保留在这里，方便继续收听和查看字幕。</p>
+            <button class="primary-button" type="button" data-go="rooms">去找讲解房</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="screen" data-screen="profile">
+        <header class="simple-page-header">
+          <h1 class="page-heading">我的</h1>
+          <p class="page-intro">管理收听偏好、内容记录与账号设置。</p>
+        </header>
+        <div class="profile-head">
+          <div class="profile-avatar-wrap">
+            <img class="profile-avatar" src="../avatars/female-tourist.webp" alt="测试导游头像" />
+            <button class="camera-badge" type="button" data-message="头像修改将在原页面中打开" aria-label="修改头像"><i data-lucide="camera"></i></button>
+          </div>
+          <div class="profile-copy">
+            <h2>测试导游</h2>
+            <span class="role-pill"><i data-lucide="headphones"></i>游客模式</span>
+          </div>
+        </div>
+
+        <div class="settings-label">收听与内容</div>
+        <div class="settings-group">
+          <button class="setting-row" type="button" data-message="字幕与翻译设置将在原页面中打开">
+            <span class="setting-icon"><i data-lucide="languages"></i></span>
+            <span class="setting-name">字幕与翻译</span>
+            <span class="setting-value">中英双语</span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button class="setting-row" type="button" data-message="字幕记录与收藏将在原页面中打开">
+            <span class="setting-icon"><i data-lucide="bookmark"></i></span>
+            <span class="setting-name">字幕记录与收藏</span>
+            <span class="setting-value"></span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="settings-label">账号与支持</div>
+        <div class="settings-group">
+          <button class="setting-row" type="button" data-message="身份与账号将在原页面中打开">
+            <span class="setting-icon"><i data-lucide="badge-check"></i></span>
+            <span class="setting-name">身份与账号</span>
+            <span class="setting-value"></span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button class="setting-row" type="button" id="language-row">
+            <span class="setting-icon"><i data-lucide="globe-2"></i></span>
+            <span class="setting-name">语言</span>
+            <span class="setting-value" id="language-value">中文</span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+          <button class="setting-row" type="button" data-message="帮助与反馈将在原页面中打开">
+            <span class="setting-icon"><i data-lucide="circle-help"></i></span>
+            <span class="setting-name">帮助与反馈</span>
+            <span class="setting-value"></span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+        <button class="logout" type="button" data-message="原型预览不会执行退出登录">退出登录</button>
+      </article>
+
+      <article class="screen subpage" data-screen="join">
+        <header class="subpage-header">
+          <button class="icon-button" type="button" data-go="rooms" aria-label="返回房间列表"><i data-lucide="chevron-left"></i></button>
+          <h1>加入房间</h1>
+          <span></span>
+        </header>
+
+        <div class="join-summary">
+          <div class="join-thumb"><img src="../ui-source/create-room.webp" alt="" /></div>
+          <div>
+            <h2 id="join-room-name">故宫文化探索团</h2>
+            <p>房间号 <span id="join-room-number">978525</span> · 正在讲解</p>
+          </div>
+        </div>
+
+        <form class="join-form" id="join-form">
+          <p class="field-label">请输入 6 位房间密码</p>
+          <div class="pin-wrap" id="pin-wrap">
+            <input class="pin-input" id="pin-input" type="tel" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="六位房间密码" />
+            <div class="pin-boxes" aria-hidden="true">
+              <span class="pin-box"></span>
+              <span class="pin-box"></span>
+              <span class="pin-box"></span>
+              <span class="pin-box"></span>
+              <span class="pin-box"></span>
+              <span class="pin-box"></span>
+            </div>
+          </div>
+          <p class="field-help">密码由导游提供，支持直接粘贴。</p>
+          <button class="primary-button join-submit" id="join-submit" type="submit" disabled>进入房间</button>
+          <div class="join-security">
+            <i data-lucide="shield-check"></i>
+            <span>密码仅用于验证本次加入；验证成功后会进入实时讲解页面。</span>
+          </div>
+        </form>
+      </article>
+
+      <nav class="bottom-nav" aria-label="游客端主导航">
+        <button class="nav-item active" type="button" data-go="rooms"><i data-lucide="door-open"></i><span>房间</span></button>
+        <button class="nav-item" type="button" data-go="recent"><i data-lucide="history"></i><span>最近</span></button>
+        <button class="nav-item" type="button" data-go="profile"><i data-lucide="user-round"></i><span>我的</span></button>
+      </nav>
+
+      <div class="toast" role="status" aria-live="polite"><i data-lucide="circle-check"></i><span id="toast-copy">操作完成</span></div>
+    </section>
+
+    <aside class="design-note" aria-label="设计说明">
+      <h2>游客端 H5 概念</h2>
+      <p>这一版不是换皮，而是把“找到并加入房间”变成一条更短、更清楚的视觉路径。</p>
+      <ul>
+        <li>同一套线性图标和状态语义</li>
+        <li>房间卡片整块可点击</li>
+        <li>空状态位于有效内容中心</li>
+        <li>密码输入支持粘贴和自动跳格</li>
+        <li>适配安全区、键盘和小屏幕</li>
+      </ul>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script>
+    const screens = Array.from(document.querySelectorAll(".screen"));
+    const nav = document.querySelector(".bottom-nav");
+    const navItems = Array.from(document.querySelectorAll(".nav-item"));
+    const toast = document.querySelector(".toast");
+    const toastCopy = document.getElementById("toast-copy");
+    const pinInput = document.getElementById("pin-input");
+    const pinBoxes = Array.from(document.querySelectorAll(".pin-box"));
+    const joinSubmit = document.getElementById("join-submit");
+    const roomSearch = document.getElementById("room-search");
+    const roomCards = Array.from(document.querySelectorAll(".room-card"));
+    const roomCount = document.getElementById("room-count");
+    let toastTimer;
+
+    function createIcons() {
+      if (window.lucide) window.lucide.createIcons({ attrs: { "aria-hidden": "true" } });
+    }
+
+    function showToast(message) {
+      toastCopy.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function showScreen(name) {
+      screens.forEach((screen) => screen.classList.toggle("active", screen.dataset.screen === name));
+      const isMain = ["rooms", "recent", "profile"].includes(name);
+      nav.style.display = isMain ? "grid" : "none";
+      navItems.forEach((item) => item.classList.toggle("active", item.dataset.go === name));
+      if (name !== "join") {
+        pinInput.value = "";
+        updatePin();
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const go = event.target.closest("[data-go]");
+      if (go) showScreen(go.dataset.go);
+
+      const message = event.target.closest("[data-message]");
+      if (message) showToast(message.dataset.message);
+    });
+
+    roomCards.forEach((card) => {
+      card.addEventListener("click", () => {
+        document.getElementById("join-room-name").textContent = card.dataset.room;
+        document.getElementById("join-room-number").textContent = card.dataset.number;
+        showScreen("join");
+        window.setTimeout(() => pinInput.focus(), 180);
+      });
+    });
+
+    roomSearch.addEventListener("input", () => {
+      const query = roomSearch.value.trim().toLowerCase();
+      let visible = 0;
+      roomCards.forEach((card) => {
+        const matched = (card.dataset.room + card.dataset.number).toLowerCase().includes(query);
+        card.style.display = matched ? "grid" : "none";
+        if (matched) visible += 1;
+      });
+      roomCount.textContent = visible + " 个房间";
+    });
+
+    document.getElementById("pin-wrap").addEventListener("click", () => pinInput.focus());
+
+    function updatePin() {
+      const value = pinInput.value.replace(/\D/g, "").slice(0, 6);
+      if (pinInput.value !== value) pinInput.value = value;
+      pinBoxes.forEach((box, index) => {
+        box.textContent = value[index] ? "●" : "";
+        box.classList.toggle("filled", index < value.length);
+        box.classList.toggle("active", index === value.length && value.length < 6);
+      });
+      joinSubmit.disabled = value.length !== 6;
+    }
+
+    pinInput.addEventListener("input", updatePin);
+    pinInput.addEventListener("focus", updatePin);
+    pinInput.addEventListener("blur", () => pinBoxes.forEach((box) => box.classList.remove("active")));
+
+    document.getElementById("join-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (pinInput.value.length !== 6) return;
+      joinSubmit.disabled = true;
+      joinSubmit.textContent = "正在验证…";
+      window.setTimeout(() => {
+        joinSubmit.textContent = "进入房间";
+        joinSubmit.disabled = false;
+        showToast("原型演示：密码验证成功");
+      }, 700);
+    });
+
+    document.getElementById("language-row").addEventListener("click", () => {
+      const value = document.getElementById("language-value");
+      value.textContent = value.textContent === "中文" ? "English" : "中文";
+      showToast("语言选择已在原型中切换");
+    });
+
+    createIcons();
+    updatePin();
+  </script>
+</body>
+</html>

@@ -1,3 +1,7 @@
+# 欢迎使用你的秒哒应用代码包
+秒哒应用链接
+    URL:https://www.miaoda.cn/projects/app-d04hti6zlz42
+
 ## 介绍
 
 项目介绍
@@ -92,6 +96,13 @@ Vite、TypeScript、React、Supabase
 ### 如何配置应用中的三方 API？
 
 具体三方 API 调用方法，请参考帮助文档：[源码导出](https://cloud.baidu.com/doc/MIAODA/s/Xmewgmsq7)，了解更多详细内容。
+
+百度短语音识别已经改为使用项目自己的 API Key/Secret Key，并由 Supabase Edge
+Function 安全调用。配置、部署与本地联调步骤见
+[`docs/BAIDU_SHORT_SPEECH.md`](docs/BAIDU_SHORT_SPEECH.md)。
+
+项目全部外部 API、当前可用性及仍需申请的云服务见
+[`docs/API_SERVICES.md`](docs/API_SERVICES.md)。
 
 ## 了解更多
 

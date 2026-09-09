@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8f6f1" />
+  <title>拾光旅伴 · 编辑个人资料视觉方案</title>
+  <!--
+    独立视觉方案，不读取接口、不修改生产数据。
+    form 推导：
+    - 叙事角色：资料编辑页，核心是“确认本人 → 修改少量资料 → 保存”。
+    - 观众距离：10cm 手机，按 320–430px H5 设计。
+    - 视觉温度：可信、温和、轻量。
+    - 容量：首屏完成全部编辑，底部操作始终可达。
+    - 视觉母题：把原本纵向拉长的“大表单”收束成一张轻量身份凭证。
+  -->
+  <style>
+    :root {
+      --page: #f8f6f1;
+      --surface: #ffffff;
+      --ink: #173428;
+      --ink-strong: #13281f;
+      --muted: #708078;
+      --soft: #99a69f;
+      --brand: #16804e;
+      --brand-strong: #116b40;
+      --brand-soft: #e7f3eb;
+      --brand-wash: #f3f8f5;
+      --line: #e2e9e4;
+      --shadow: 0 12px 34px rgba(31, 67, 48, 0.07);
+      --font: "SF Pro Text", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #e8efea;
+      color: var(--ink);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      font-synthesis: none;
+    }
+
+    button,
+    input { font: inherit; }
+
+    button { -webkit-tap-highlight-color: transparent; }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(22, 128, 78, 0.22);
+      outline-offset: 2px;
+    }
+
+    .preview-shell {
+      width: min(100%, 430px);
+      min-height: 100dvh;
+      margin: 0 auto;
+      background:
+        radial-gradient(circle at 100% 0, rgba(211, 232, 218, 0.46), transparent 220px),
+        var(--page);
+      box-shadow: 0 18px 60px rgba(25, 58, 40, 0.14);
+    }
+
+    .page {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      height: calc(62px + env(safe-area-inset-top));
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      align-items: end;
+      padding: env(safe-area-inset-top) 18px 11px;
+      background: rgba(248, 246, 241, 0.9);
+      border-bottom: 1px solid rgba(217, 226, 220, 0.72);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      align-self: center;
+      text-align: center;
+      color: var(--ink-strong);
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 760;
+      letter-spacing: 0.01em;
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      align-self: center;
+      border: 0;
+      border-radius: 13px;
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .icon-button:active { background: rgba(22, 128, 78, 0.08); }
+    .icon-button svg { width: 24px; height: 24px; }
+
+    main {
+      width: 100%;
+      flex: 1;
+      padding: 18px 20px 126px;
+    }
+
+    .profile-card {
+      position: relative;
+      min-height: 130px;
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      align-items: center;
+      gap: 18px;
+      overflow: hidden;
+      padding: 18px;
+      border: 1px solid rgba(173, 207, 186, 0.55);
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 88% 4%, rgba(255, 255, 255, 0.92) 0 28px, transparent 29px),
+        linear-gradient(135deg, #f0f8f3 0%, #e2f1e7 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .profile-card::after {
+      content: "";
+      position: absolute;
+      right: -42px;
+      bottom: -70px;
+      width: 168px;
+      height: 168px;
+      border-radius: 50%;
+      border: 34px solid rgba(184, 219, 196, 0.3);
+      pointer-events: none;
+    }
+
+    .avatar-wrap {
+      position: relative;
+      z-index: 1;
+      width: 92px;
+      height: 92px;
+    }
+
+    .avatar-button {
+      width: 92px;
+      height: 92px;
+      overflow: hidden;
+      padding: 0;
+      border: 3px solid rgba(255, 255, 255, 0.96);
+      border-radius: 50%;
+      background: #dfece3;
+      box-shadow: 0 7px 20px rgba(27, 76, 48, 0.12);
+      cursor: pointer;
+    }
+
+    .avatar-button img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .camera-badge {
+      position: absolute;
+      right: -1px;
+      bottom: -1px;
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 3px solid #edf7f0;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      pointer-events: none;
+    }
+
+    .camera-badge svg { width: 15px; height: 15px; }
+
+    .profile-copy {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
+
+    .profile-copy small {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--brand);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .profile-copy strong {
+      display: block;
+      color: var(--ink-strong);
+      font-size: 20px;
+      line-height: 1.3;
+      font-weight: 760;
+    }
+
+    .profile-copy p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .section-title {
+      margin: 22px 4px 9px;
+      color: #62756b;
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 720;
+    }
+
+    .form-card {
+      overflow: hidden;
+      border: 1px solid #d9e5dd;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 10px 28px rgba(31, 67, 48, 0.055);
+    }
+
+    .field-row {
+      min-height: 72px;
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+      margin: 0 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .field-row:last-child { border-bottom: 0; }
+
+    .field-label {
+      color: #536a5e;
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .profile-input {
+      width: 100%;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--ink-strong);
+      font-size: 16px;
+      text-align: right;
+      outline: 0;
+    }
+
+    .profile-input::placeholder { color: #a9b2ad; }
+
+    .gender-switch {
+      justify-self: end;
+      display: grid;
+      grid-template-columns: repeat(2, 58px);
+      gap: 4px;
+      padding: 4px;
+      border-radius: 13px;
+      background: #f1f5f2;
+    }
+
+    .gender-switch button {
+      height: 36px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #77837d;
+      font-size: 14px;
+      font-weight: 680;
+      cursor: pointer;
+    }
+
+    .gender-switch button.active {
+      background: #fff;
+      color: var(--brand);
+      box-shadow: 0 2px 8px rgba(30, 68, 48, 0.1);
+    }
+
+    .inline-value {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      color: var(--ink-strong);
+      font-size: 15px;
+      font-weight: 590;
+      text-align: right;
+    }
+
+    .inline-value svg {
+      width: 16px;
+      height: 16px;
+      color: #8a9991;
+    }
+
+    .role-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 13px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand);
+      font-size: 14px;
+      font-weight: 720;
+    }
+
+    .role-chip svg { width: 16px; height: 16px; }
+
+    .field-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin: 10px 4px 0;
+      color: #8b9891;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .field-note svg {
+      width: 15px;
+      height: 15px;
+      margin-top: 1px;
+      flex: 0 0 auto;
+    }
+
+    .save-dock {
+      position: fixed;
+      z-index: 12;
+      left: 50%;
+      bottom: 0;
+      width: min(100%, 430px);
+      padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(248, 246, 241, 0), rgba(248, 246, 241, 0.96) 24%, #f8f6f1 48%);
+    }
+
+    .save-button {
+      width: 100%;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #1b8b55 0%, #147747 100%);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 760;
+      box-shadow: 0 10px 22px rgba(20, 119, 71, 0.22);
+      cursor: pointer;
+    }
+
+    .save-button:active { transform: translateY(1px); }
+    .save-button svg { width: 19px; height: 19px; }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: calc(88px + env(safe-area-inset-bottom));
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 15px;
+      border-radius: 999px;
+      background: rgba(18, 43, 31, 0.94);
+      color: #fff;
+      font-size: 13px;
+      box-shadow: 0 10px 28px rgba(17, 44, 29, 0.22);
+      transform: translate(-50%, 18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast svg { width: 16px; height: 16px; }
+
+    @media (max-width: 350px) {
+      main { padding-inline: 16px; }
+      .topbar { padding-inline: 14px; }
+      .profile-card { grid-template-columns: 78px minmax(0, 1fr); gap: 14px; padding: 16px; }
+      .avatar-wrap, .avatar-button { width: 78px; height: 78px; }
+      .camera-badge { width: 29px; height: 29px; }
+      .profile-copy strong { font-size: 18px; }
+      .profile-copy p { font-size: 12px; }
+      .field-row { grid-template-columns: 68px minmax(0, 1fr); margin-inline: 14px; }
+      .gender-switch { grid-template-columns: repeat(2, 52px); }
+      .save-dock { padding-inline: 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <div class="page">
+      <header class="topbar">
+        <button class="icon-button" type="button" aria-label="返回" id="backButton">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+        <h1>编辑个人资料</h1>
+        <span aria-hidden="true"></span>
+      </header>
+
+      <main>
+        <section class="profile-card" aria-label="头像设置">
+          <div class="avatar-wrap">
+            <button class="avatar-button" type="button" id="avatarButton" aria-label="更换头像">
+              <img id="avatarImage" src="../avatars/male-guide.webp" alt="当前头像" />
+            </button>
+            <span class="camera-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 4h-5L7.7 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2.7z" />
+                <circle cx="12" cy="13" r="3.2" />
+              </svg>
+            </span>
+          </div>
+          <div class="profile-copy">
+            <small>个人头像</small>
+            <strong>让同行者认出你</strong>
+            <p>点击头像即可更换照片，建议使用清晰正面照。</p>
+          </div>
+          <input id="avatarInput" type="file" accept="image/*" hidden />
+        </section>
+
+        <h2 class="section-title">基本资料</h2>
+        <section class="form-card" aria-label="基本资料">
+          <label class="field-row">
+            <span class="field-label">昵称</span>
+            <input class="profile-input" id="nicknameInput" value="小奥" maxlength="20" aria-label="昵称" />
+          </label>
+          <div class="field-row">
+            <span class="field-label">性别</span>
+            <div class="gender-switch" role="group" aria-label="性别">
+              <button type="button" class="active" data-gender="male" aria-pressed="true">♂ 男</button>
+              <button type="button" data-gender="female" aria-pressed="false">♀ 女</button>
+            </div>
+          </div>
+        </section>
+
+        <h2 class="section-title">账号与身份</h2>
+        <section class="form-card" aria-label="账号与身份">
+          <div class="field-row">
+            <span class="field-label">手机号</span>
+            <span class="inline-value">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="6" y="2" width="12" height="20" rx="2" />
+                <path d="M10 18h4" />
+              </svg>
+              8613591349551
+            </span>
+          </div>
+          <div class="field-row">
+            <span class="field-label">当前身份</span>
+            <span class="role-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+                <path d="m9 15 6-6" />
+                <path d="m14 8 2 2" />
+              </svg>
+              导游
+            </span>
+          </div>
+        </section>
+        <p class="field-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5M12 8h.01" />
+          </svg>
+          手机号与当前身份属于账号信息，不在本页直接变更。
+        </p>
+      </main>
+
+      <div class="save-dock">
+        <button class="save-button" id="saveButton" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m5 12 4 4L19 6" />
+          </svg>
+          保存修改
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+    预览：资料已保存
+  </div>
+
+  <script>
+    const avatarButton = document.getElementById('avatarButton');
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarImage = document.getElementById('avatarImage');
+    const genderButtons = document.querySelectorAll('[data-gender]');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    avatarButton.addEventListener('click', () => avatarInput.click());
+    avatarInput.addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      avatarImage.src = URL.createObjectURL(file);
+    });
+
+    genderButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        genderButtons.forEach((item) => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+      });
+    });
+
+    document.getElementById('saveButton').addEventListener('click', () => {
+      window.clearTimeout(toastTimer);
+      toast.classList.add('show');
+      toastTimer = window.setTimeout(() => toast.classList.remove('show'), 1600);
+    });
+
+    document.getElementById('backButton').addEventListener('click', () => {
+      window.clearTimeout(toastTimer);
+      toast.textContent = '预览：返回操作保持原路由逻辑';
+      toast.classList.add('show');
+      toastTimer = window.setTimeout(() => {
+        toast.classList.remove('show');
+        toast.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>预览：资料已保存';
+      }, 1600);
+    });
+  </script>
+</body>
+</html>

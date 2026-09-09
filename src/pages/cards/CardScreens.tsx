@@ -1,10 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Landmark, Crown, Star, CalendarDays, Copy, Search, Send, Edit2, SkipForward, CheckCircle2, RotateCcw, ChevronUp } from 'lucide-react';
+import { Landmark, Crown, Star, CalendarDays, Search, Send, Edit2, SkipForward, CheckCircle2, RotateCcw, ChevronUp, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchKcPageForPush, fetchPushedKcIds, pushKcCard, fetchKcByPush } from '@/api/cards';
-import { fetchSubtitlesSafe } from '@/api/subtitles';
-import { toggleFavorite, fetchFavorites } from '@/api/photos';
-import type { KnowledgeCard, Subtitle, Favorite } from '@/types/types';
+import {
+  fetchKcPageForPush,
+  fetchPushedKcIds,
+  fetchPushedKcsForRoom,
+  pushKcCard,
+  fetchKcByPush,
+} from '@/api/cards';
+import { fetchMeetingMinutesCloud } from '@/api/meetingMinutes';
+import { readMeetingMinutes, saveMeetingMinutes, type MeetingMinutes } from '@/lib/meetingMinutes';
+import type { KnowledgeCard } from '@/types/types';
 import { toast } from 'sonner';
 import { KnowledgeCardEditModal } from '@/pages/guide/GuideExtra';
 
@@ -214,7 +220,7 @@ export function CardLibrary({ go }: Props) {
     cursor: { createdAt: string; id: string } | undefined,
     currentPushedIds: Set<string>,
   ) => {
-    if (!currentRoom || loadingRef.current || !hasMoreRef.current) return;
+    if (!currentRoom || !user?.id || loadingRef.current || !hasMoreRef.current) return;
     loadingRef.current = true;
     setLoading(true);
     setLoadError(false);
@@ -222,7 +228,7 @@ export function CardLibrary({ go }: Props) {
     let cards: KnowledgeCard[] = [];
     let hasMore = false;
     try {
-      const result = await fetchKcPageForPush(cursor, cat, q);
+      const result = await fetchKcPageForPush(user.id, cursor, cat, q);
       cards = result.cards;
       hasMore = result.hasMore;
       console.log(`[CardLibrary] 加载 ${cards.length} 张卡片，pushedIds=${currentPushedIds.size}，hasMore=${hasMore}`);
@@ -251,7 +257,7 @@ export function CardLibrary({ go }: Props) {
     if (!hasMore) setAllLoaded(true);
     loadingRef.current = false;
     setLoading(false);
-  }, [currentRoom?.id]);
+  }, [currentRoom?.id, user?.id]);
 
   // ── 初始加载（category/search/room 变化时重置后首批） ──
   useEffect(() => {
@@ -665,6 +671,108 @@ export function CardLibrary({ go }: Props) {
   );
 }
 
+// ─── 游客端已推送卡片库（只读） ─────────────────────────────────────
+export function TouristCardLibrary({ go }: Props) {
+  const { currentRoom } = useAuth();
+  const [items, setItems] = useState<Array<{
+    kcCardId: string;
+    pushedAt: string;
+    kc: KnowledgeCard;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+
+  useEffect(() => {
+    if (!currentRoom) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
+    fetchPushedKcsForRoom(currentRoom.id)
+      .then(rows => {
+        if (!cancelled) setItems(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRoom?.id, retryTick]);
+
+  const viewCard = (kcCardId: string) => {
+    sessionStorage.setItem(ACTIVE_KC_ID_KEY, kcCardId);
+    sessionStorage.setItem(ROOM_CARD_RETURN_KEY, 'card-library');
+    go('room-card-detail');
+  };
+
+  return (
+    <div className="screen padded-screen">
+      <div className="mini-header">
+        <button className="back-button" onClick={() => go('listening')} aria-label="返回">
+          <span className="back-chevron" />
+        </button>
+        <strong>景点卡片</strong>
+        <span />
+      </div>
+
+      {currentRoom && (
+        <p className="clp-loading-hint" style={{ margin: '4px 0 14px' }}>
+          {currentRoom.name} · 导游已推送 {items.length} 张
+        </p>
+      )}
+
+      {loading && <p className="clp-loading-hint">正在加载卡片…</p>}
+
+      {!loading && loadError && (
+        <div className="clp-error-row">
+          <span>卡片加载失败</span>
+          <button className="clp-retry-link" onClick={() => setRetryTick(value => value + 1)}>
+            重新加载
+          </button>
+        </div>
+      )}
+
+      {!loading && !loadError && items.length === 0 && (
+        <div className="empty-state" style={{ marginTop: 48 }}>
+          <Landmark size={40} className="empty-icon" />
+          <p className="empty-title">暂无景点卡片</p>
+          <small className="empty-desc">导游推送后会显示在这里</small>
+        </div>
+      )}
+
+      <div className="clp-list">
+        {items.map(({ kcCardId, kc }) => (
+          <ScenicCardShell
+            key={kcCardId}
+            imageUrl={kc.image_url}
+            titleCn={kc.title_cn}
+            titleEn={kc.title_en}
+            descCn={kc.desc_cn}
+            category={kc.category}
+            footerActions={(
+              <button
+                className="sc-btn sc-btn--push"
+                onClick={() => viewCard(kcCardId)}
+                aria-label={`查看${kc.title_cn}`}
+              >
+                查看详情
+              </button>
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── 卡片详情（游客/导游共用）——Task2：按 kc_card_id 通过 RPC 精确加载 KC ──
 // 进入条件：sessionStorage.active_kc_card_id 有值
 // 返回路径：sessionStorage.room_card_return_to（默认 listening）
@@ -745,7 +853,7 @@ export function RoomCardDetail({ go }: Props) {
   const contentEn = kc?.desc_en;
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen tourist-card-detail-screen">
       <div className="mini-header">
         <button className="back-button" onClick={handleBack} aria-label="返回">
           <span className="back-chevron" />
@@ -794,7 +902,7 @@ export function CardDetail({ go }: Props) {
   const contentEn = card?.desc_en;
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen tourist-card-detail-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go(backTarget)} aria-label="返回">
           <span className="back-chevron" />
@@ -827,132 +935,111 @@ export function CardDetail({ go }: Props) {
 
 
 
-// ─── 字幕历史 ──────────────────────────────────────────
+// ─── 会议纪要只读页 ─────────────────────────────────────
 export function SubtitleHistory({ go }: Props) {
-  const { user, currentRoom } = useAuth();
-  const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
-  const [favIds, setFavIds] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState('');
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const { profile, currentRoom } = useAuth();
+  const [minutes, setMinutes] = useState<MeetingMinutes | null>(
+    () => currentRoom ? readMeetingMinutes(currentRoom.id) : null,
+  );
+  const [loadingMinutes, setLoadingMinutes] = useState(true);
+  const [minutesError, setMinutesError] = useState('');
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
-    if (!currentRoom) return;
-    fetchSubtitlesSafe(currentRoom.id, 100).then(subs => setSubtitles(subs.reverse()));
-    if (user) {
-      fetchFavorites(user.id).then(favs => {
-        setFavIds(new Set(favs.filter(f => f.target_type === 'subtitle').map(f => f.target_id)));
-      });
+    let cancelled = false;
+    if (!currentRoom) {
+      setMinutes(null);
+      setLoadingMinutes(false);
+      return;
     }
-  }, [currentRoom?.id, user?.id]);
+    const cachedMinutes = readMeetingMinutes(currentRoom.id);
+    setLoadingMinutes(true);
+    setMinutesError('');
+    setMinutes(cachedMinutes);
+    void (async () => {
+      try {
+        const cloudMinutes = await fetchMeetingMinutesCloud(currentRoom.id);
+        if (!cancelled && cloudMinutes) {
+          saveMeetingMinutes(cloudMinutes);
+          setMinutes(cloudMinutes);
+        }
+      } catch (error) {
+        if (!cancelled && !cachedMinutes) {
+          setMinutesError(error instanceof Error ? error.message : '会议纪要读取失败');
+        }
+      } finally {
+        if (!cancelled) setLoadingMinutes(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentRoom?.id, retryTick]);
 
-  const filtered = search
-    ? subtitles.filter(s => s.content_cn.includes(search) || (s.content_en ?? '').includes(search))
-    : subtitles;
-
-  const fontSizeMap = { small: 13, medium: 15, large: 17 };
-
-  const handleFav = async (s: Subtitle) => {
-    if (!user) return;
-    const isFav = favIds.has(s.id);
-    await toggleFavorite(user.id, 'subtitle', s.id, isFav);
-    setFavIds(prev => {
-      const next = new Set(prev);
-      if (isFav) next.delete(s.id); else next.add(s.id);
-      return next;
-    });
-  };
+  const backTarget = currentRoom?.status === 'ended' || currentRoom?.status === 'archived'
+    ? profile?.role === 'photographer' ? 'photographer-tasks' : 'recent-rooms'
+    : 'listening';
 
   return (
     <div className="screen sh-screen">
       {/* 顶部固定头部 */}
       <div className="mini-header">
-        <button className="back-button" onClick={() => go('listening')} aria-label="返回">
+        <button className="back-button" onClick={() => go(backTarget)} aria-label="返回">
           <span className="back-chevron" />
         </button>
-        <strong>讲解记录</strong>
+        <strong>会议纪要</strong>
         <span />
       </div>
 
-      {/* 搜索框：全宽圆角 */}
-      <div className="sh-search-bar">
-        <Search size={15} className="sh-search-icon" />
-        <input
-          placeholder="搜索字幕内容"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
-
-      {/* 字号控制行 */}
-      <div className="sh-font-row">
-        <span className="sh-font-label">字号</span>
-        <div className="sh-font-seg">
-          {(['small', 'medium', 'large'] as const).map(s => (
-            <button
-              key={s}
-              className={fontSize === s ? 'active' : ''}
-              onClick={() => setFontSize(s)}
-            >
-              {s === 'small' ? '小' : s === 'medium' ? '中' : '大'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 字幕卡片列表 */}
-      <div className="sh-list">
-        {filtered.length === 0 ? (
-          <div className="sh-empty">
-            <p>{search ? '未找到匹配内容' : '暂无字幕记录'}</p>
+      <div className="sh-minutes-page-body">
+        {loadingMinutes ? (
+          <div className="sh-minutes-loading" aria-busy="true">
+            <div className="spinner" />
+            <span>正在读取会议纪要…</span>
           </div>
-        ) : filtered.map(s => (
-          <div key={s.id} className="sh-card">
-            {/* 正文：中文 + 英文 单列 */}
-            <div className="sh-body">
-              {s.content_cn && (
-                <p className="sh-cn" style={{ fontSize: fontSizeMap[fontSize] }}>
-                  {s.content_cn}
-                </p>
-              )}
-              {s.content_en && (
-                <p className="sh-en" style={{ fontSize: fontSizeMap[fontSize] - 2 }}>
-                  {s.content_en}
-                </p>
-              )}
-            </div>
-            {/* 底部操作行 */}
-            <div className="sh-footer">
-              <span className="sh-time">
-                {new Date(s.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-              <div className="sh-actions">
-                <button
-                  className="sh-action-btn"
-                  aria-label="复制"
-                  onClick={() => {
-                    navigator.clipboard.writeText(s.content_cn).then(() => toast.success('已复制')).catch(() => {
-                      const ta = document.createElement('textarea');
-                      ta.value = s.content_cn;
-                      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                      toast.success('已复制');
-                    });
-                  }}
-                >
-                  <Copy size={16} />
-                </button>
-                <button
-                  className={`sh-action-btn${favIds.has(s.id) ? ' sh-fav-active' : ''}`}
-                  aria-label={favIds.has(s.id) ? '取消收藏' : '收藏'}
-                  onClick={() => handleFav(s)}
-                >
-                  <Star size={16} />
-                </button>
+        ) : minutesError ? (
+          <div className="sh-minutes-message" role="alert">
+            <span className="sh-minutes-message-icon"><FileText size={24} /></span>
+            <strong>会议纪要加载失败</strong>
+            <p>{minutesError}</p>
+            <button onClick={() => setRetryTick(value => value + 1)}><RefreshCw size={14} />重新加载</button>
+          </div>
+        ) : minutes ? (
+          <section className={`sh-minutes-card${minutes.subtitleCount === 0 ? ' is-empty' : ''}`} aria-label="会议纪要">
+            <div className="sh-minutes-head">
+              <span className="sh-minutes-heading-icon"><Sparkles size={16} /></span>
+              <div className="sh-minutes-heading-copy">
+                <span>会议纪要</span>
+                <small>{minutes.subtitleCount > 0 ? `${minutes.subtitleCount} 条字幕生成` : '等待有效字幕'}</small>
               </div>
+              <span className={`sh-minutes-status${minutes.subtitleCount === 0 ? ' pending' : ''}`}>
+                {minutes.subtitleCount === 0 ? '未生成' : '已生成'}
+              </span>
             </div>
+            <p className="sh-minutes-room">{currentRoom?.name ?? '讲解房间'}</p>
+            <h2>{minutes.subtitleCount === 0 ? '本场讲解暂无可用纪要' : (minutes.title || currentRoom?.name)}</h2>
+            <p className="sh-minutes-overview">{minutes.overview}</p>
+            {minutes.subtitleCount > 0 && minutes.keyPoints?.length > 0 && (
+              <div className="sh-minutes-points">
+                <h3>讲解要点</h3>
+                <ol>
+                  {minutes.keyPoints.map((point, index) => (
+                    <li key={`${index}-${point}`}><span>{index + 1}</span><p>{point}</p></li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {minutes.subtitleCount > 0 && minutes.keywords?.length > 0 && (
+              <div className="sh-minutes-keywords">
+                {minutes.keywords.slice(0, 5).map(keyword => <span key={keyword}>{keyword}</span>)}
+              </div>
+            )}
+          </section>
+        ) : (
+          <div className="sh-minutes-message">
+            <span className="sh-minutes-message-icon"><FileText size={24} /></span>
+            <strong>会议纪要尚未生成</strong>
+            <p>房间结束并完成字幕处理后，会议纪要会显示在这里。</p>
           </div>
-        ))}
-        {/* 列表底部安全区 */}
-        <div className="sh-bottom-space" />
+        )}
       </div>
     </div>
   );

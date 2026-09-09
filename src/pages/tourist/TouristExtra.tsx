@@ -6,24 +6,26 @@
  * - WeakNetModal  (R08)       弱网重连
  * - RoomEndedOverlay (R09)   讲解已结束覆盖
  */
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   Landmark, Clock3, ChevronRight, Headphones, Languages, Radio,
   Star, Settings2, HelpCircle, LogOut, Shield, BookOpen, Edit3,
   Camera, Check, X, Bell, History, UserRound, Wifi, WifiOff,
-  RefreshCw, AlignLeft, ChevronDown, ChevronUp,
+  RefreshCw, AlignLeft, ChevronDown, ChevronUp, Globe2, Route,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
 import { fetchSubtitlesSafe } from '@/api/subtitles';
 // joinRoom / hasJoinedRoom 已随邀请落地页一同移除，不再需要
-import { resolveRoomEntry } from '@/api/roomActivity';
+import { fetchMyJoinedRoomsStrict, resolveRoomEntry } from '@/api/roomActivity';
 import type { Room, Subtitle, LanguageMode } from '@/types/types';
 import { toast } from 'sonner';
 import { BottomNav } from '@/pages/guide/GuideScreens';
 import { AvatarCropModal } from '@/components/AvatarCropModal';
 import { useAvatarUploadFlow, AVATAR_ACCEPT } from '@/hooks/useAvatarUploadFlow';
 import { useTouristRoomCleanup } from '@/hooks/useTouristRoomCleanup';
+import { LanguageSettingsSheet } from '@/components/LanguageSettingsSheet';
+import { useAppLanguage } from '@/i18n/AppLanguageContext';
 
 interface Props { go: (id: string) => void }
 
@@ -45,22 +47,33 @@ export function RecentRooms({ go }: Props) {
   const { user, setCurrentRoom } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retryTick, setRetryTick] = useState(0);
   const [enteringId, setEnteringId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('memberships')
-      .select('room_id, joined_at, rooms(*)')
-      .eq('user_id', user.id)
-      .order('joined_at', { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        const list = (data ?? []).map((m: Record<string, unknown>) => m.rooms as Room).filter(Boolean);
-        setRooms(list);
-        setLoading(false);
+    let cancelled = false;
+    if (!user) {
+      setRooms([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError('');
+    fetchMyJoinedRoomsStrict()
+      .then(list => {
+        if (!cancelled) setRooms(list);
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setRooms([]);
+        setLoadError(error instanceof Error ? error.message : '加入记录读取失败');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user?.id, retryTick]);
 
   const handleEnter = async (room: Room) => {
     if (enteringId) return;
@@ -71,51 +84,133 @@ export function RecentRooms({ go }: Props) {
     go(target);
   };
 
+  const orderedRooms = useMemo(() => [...rooms].sort((a, b) => {
+    const aEnded = a.status === 'ended' || a.status === 'archived';
+    const bEnded = b.status === 'ended' || b.status === 'archived';
+    if (aEnded !== bEnded) return aEnded ? 1 : -1;
+    const aTime = new Date(a.started_at ?? a.created_at ?? 0).getTime();
+    const bTime = new Date(b.started_at ?? b.created_at ?? 0).getTime();
+    return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+  }), [rooms]);
+
+  const activeRooms = orderedRooms.filter(room => room.status !== 'ended' && room.status !== 'archived');
+  const endedRooms = orderedRooms.filter(room => room.status === 'ended' || room.status === 'archived');
+
+  const openRoomContent = (room: Room, target: 'subtitle-history' | 'room-album') => {
+    setCurrentRoom(room);
+    go(target);
+  };
+
+  const renderRoomCard = (room: Room) => {
+    const ended = room.status === 'ended' || room.status === 'archived';
+    const speaker = room.guide?.nickname ?? room.guide?.username ?? '主讲人待同步';
+    const statusLabel = ended
+      ? '已结束'
+      : room.status === 'live'
+        ? '讲解中'
+        : room.status === 'paused'
+          ? '已暂停'
+          : '待开始';
+
+    return (
+      <article key={room.id} className={`recent-room-card${ended ? ' is-ended' : ' is-active'}`}>
+        <div className="recent-room-main">
+          <div className="rec-room-cover-small">
+            {room.cover_url
+              ? <img src={room.cover_url} alt={room.name} />
+              : <Landmark size={20} />
+            }
+          </div>
+          <div className="recent-room-info">
+            <div className="recent-room-title-row">
+              <span className="recent-room-name">{room.name}</span>
+              <span className={`recent-status-pill${ended ? ' ended' : ''}`}>
+                {!ended && room.status === 'live' && <Radio size={11} />}
+                {statusLabel}
+              </span>
+            </div>
+            <span className="recent-room-meta">房间号 {room.room_number}</span>
+            <span className="recent-room-fact"><Clock3 size={12} />开始时间 {fmtDate(room.started_at ?? room.created_at ?? null)}</span>
+            <span className="recent-room-fact"><UserRound size={12} />主讲人 {speaker}</span>
+          </div>
+        </div>
+        <div className={`recent-room-actions${ended ? ' ended-actions' : ''}`}>
+          {ended ? (
+            <>
+              <button onClick={() => openRoomContent(room, 'subtitle-history')}>
+                <BookOpen size={14} />查看纪要
+              </button>
+              <button onClick={() => openRoomContent(room, 'room-album')}>
+                <Camera size={14} />浏览照片
+              </button>
+            </>
+          ) : (
+            <button className="primary" disabled={!!enteringId} onClick={() => handleEnter(room)}>
+              {enteringId === room.id ? <span className="spinner-sm" /> : <><ChevronRight size={14} />进入房间</>}
+            </button>
+          )}
+        </div>
+      </article>
+    );
+  };
+
   return (
-    <div className="screen padded-screen has-tabbar">
-      <div className="section-heading">
-        <span><History />最近记录</span>
-        <h2>加入的房间</h2>
-        <p>可重新进入有效房间，或回看字幕历史</p>
-      </div>
+    <div className="screen padded-screen has-tabbar tourist-recent-screen">
+      <div className="tourist-page-scroll">
+      <header className="tourist-simple-page-header">
+        <h1>最近记录</h1>
+        <p>重新进入有效房间，或回看已保存的字幕。</p>
+      </header>
 
       {loading ? (
         <div className="loading-state"><div className="spinner" /><span>加载中…</span></div>
+      ) : loadError ? (
+        <div className="empty-state tourist-recent-empty" role="alert">
+          <span className="tourist-empty-orbit"><RefreshCw size={38} /></span>
+          <p className="empty-title">加入记录加载失败</p>
+          <small className="empty-desc">{loadError}</small>
+          <button className="empty-action-btn" onClick={() => setRetryTick(value => value + 1)}>重新加载</button>
+        </div>
       ) : rooms.length === 0 ? (
-        <div className="empty-state">
-          <Landmark size={40} className="empty-icon" />
-          <p className="empty-title">还没有加入过房间</p>
-          <small className="empty-desc">加入讲解房间后，历史记录会显示在这里</small>
+        <div className="empty-state tourist-recent-empty">
+          <span className="tourist-empty-orbit"><Route size={40} /></span>
+          <p className="empty-title">旅程从第一次加入开始</p>
+          <small className="empty-desc">你加入过的房间会保留在这里，方便继续收听和查看字幕。</small>
           <button className="empty-action-btn" onClick={() => go('room-list')}>去找讲解房</button>
         </div>
       ) : (
-        <div className="recent-room-list">
-          {rooms.map(room => (
-            <div key={room.id} className="recent-room-card">
-              <div className="rec-room-cover-small">
-                {room.cover_url
-                  ? <img src={room.cover_url} alt={room.name} />
-                  : <Landmark size={18} />
-                }
+        <div className="recent-room-content">
+          {activeRooms.length > 0 && (
+            <section className="recent-room-group" aria-labelledby="recent-active-title">
+              <div className="recent-room-toolbar">
+                <strong id="recent-active-title">进行中</strong>
+                <span>{activeRooms.length} 个房间</span>
               </div>
-              <div className="recent-room-info">
-                <span className="recent-room-name">{room.name}</span>
-                <span className="recent-room-meta">
-                  房间号 {room.room_number}
-                </span>
-                <span className="recent-room-status">
-                  {room.status === 'live' ? <><Radio size={10} />讲解中</> : room.status === 'ended' ? '已结束' : '等待开始'}
-                </span>
+              <div className="recent-room-list">{activeRooms.map(renderRoomCard)}</div>
+            </section>
+          )}
+
+          {endedRooms.length > 0 && (
+            <section className="recent-room-group ended-group" aria-labelledby="recent-ended-title">
+              <div className="recent-room-toolbar">
+                <strong id="recent-ended-title">已结束</strong>
+                <span>{endedRooms.length} 个房间</span>
               </div>
-              <button className="recent-enter-btn" disabled={!!enteringId} onClick={() => handleEnter(room)}>
-                {enteringId === room.id
-                  ? <span className="spinner-sm" />
-                  : room.status === 'ended' ? <><BookOpen size={12} />回看</> : <><ChevronRight size={12} />进入</>}
-              </button>
-            </div>
-          ))}
+              <div className="recent-room-list">{endedRooms.map(renderRoomCard)}</div>
+            </section>
+          )}
+
+          <button className="recent-explore-entry" onClick={() => go('room-list')}>
+            <span className="recent-explore-icon"><Route size={20} /></span>
+            <span className="recent-explore-copy">
+              <strong>继续发现讲解</strong>
+              <small>查看正在进行的房间</small>
+            </span>
+            <ChevronRight size={18} />
+          </button>
         </div>
       )}
+      </div>
 
       <BottomNav active="最近" go={go} variant="visitorHome" />
     </div>
@@ -208,7 +303,7 @@ export function SubtitleTab({ go }: Props) {
         onScroll={handleScroll}
       >
         {subtitles.length === 0 ? (
-          <div className="empty-state" style={{ paddingTop: 60 }}>
+          <div className="empty-state subtitle-tab-empty">
             <AlignLeft size={40} className="empty-icon" />
             <p className="empty-title">等待字幕</p>
             <small className="empty-desc">导游开始讲解后，字幕将实时出现在这里</small>
@@ -303,10 +398,12 @@ export function RoomEndedOverlay({ go, endedAt }: RoomEndedProps) {
 // ─── V08 游客「我的」 ─────────────────────────────────
 export function TouristMyPage({ go }: Props) {
   const { user, profile, signOut } = useAuth();
+  const { locale, resetLocaleForDeletedAccount } = useAppLanguage();
   const { performTouristCleanup } = useTouristRoomCleanup();
   const [showSignOut, setShowSignOut] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [showLanguageSettings, setShowLanguageSettings] = useState(false);
 
   // 头像上传共用 hook
   const { cropSrc, fileRef, handleFileChange, handleCropConfirm, handleCropClose } =
@@ -344,6 +441,7 @@ export function TouristMyPage({ go }: Props) {
         'shiguang-wifi-only',
         'shiguang-cache-hint',
       ].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+      resetLocaleForDeletedAccount();
       await signOut();
       go('login');
     } catch {
@@ -354,10 +452,21 @@ export function TouristMyPage({ go }: Props) {
 
   const langLabel: Record<string, string> = { cn: '中文', en: 'English', bilingual: '中英双语' };
   const defaultLang = (profile as unknown as Record<string,string>)?.default_language ?? 'bilingual';
+  const maskedPhone = profile?.phone
+    ? profile.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+    : '—';
+  const genderLabel = profile?.gender === 'male' ? '男' : profile?.gender === 'female' ? '女' : '—';
 
   return (
-    <div className="screen padded-screen has-tabbar my-page">
-      <div className="mini-header"><span /><strong>我的</strong><span /></div>
+    <div className="screen padded-screen has-tabbar my-page tourist-profile-screen">
+      <div className="tourist-page-scroll">
+      <div className="mini-header tourist-profile-header">
+        <span />
+        <strong>我的</strong>
+        <button className="my-edit-btn" onClick={() => go('profile')} aria-label="编辑游客资料">
+          <Edit3 size={18} />
+        </button>
+      </div>
 
       <div className="my-hero">
         <div className="my-avatar-wrap">
@@ -367,10 +476,33 @@ export function TouristMyPage({ go }: Props) {
           </button>
           <input ref={fileRef} type="file" accept={AVATAR_ACCEPT} hidden onChange={handleFileChange} />
         </div>
-        <h2 className="my-name">{profile?.nickname ?? '游客'}</h2>
-        <span className="my-role-tag tourist-tag"><UserRound size={13} />游客</span>
+        <div className="my-hero-copy">
+          <h2 className="my-name">{profile?.nickname ?? '游客'}</h2>
+          <span className="my-role-tag tourist-tag"><Headphones size={13} />游客模式</span>
+        </div>
       </div>
 
+      <p className="tourist-settings-label tourist-account-label">账号信息</p>
+      <div className="my-section-card tourist-account-card">
+        <div className="my-info-row">
+          <span className="my-info-label">昵称</span>
+          <span className="my-info-value">{profile?.nickname ?? '游客'}</span>
+        </div>
+        <div className="my-info-row">
+          <span className="my-info-label">手机号</span>
+          <span className="my-info-value">{maskedPhone}</span>
+        </div>
+        <div className="my-info-row">
+          <span className="my-info-label">性别</span>
+          <span className="my-info-value">{genderLabel}</span>
+        </div>
+        <div className="my-info-row">
+          <span className="my-info-label">身份</span>
+          <span className="my-info-value my-role-badge"><Headphones size={14} />游客</span>
+        </div>
+      </div>
+
+      <p className="tourist-settings-label">收听与内容</p>
       <div className="my-section-card">
         <button className="my-menu-item" onClick={() => go('subtitle-settings')}>
           <span className="my-menu-icon blue"><AlignLeft size={16} /></span>
@@ -380,7 +512,16 @@ export function TouristMyPage({ go }: Props) {
         </button>
         <button className="my-menu-item" onClick={() => go('subtitle-history')}>
           <span className="my-menu-icon green"><Star size={16} /></span>
-          <span className="my-menu-label">我的收藏</span>
+          <span className="my-menu-label">字幕记录与收藏</span>
+          <ChevronRight size={16} className="my-menu-arrow" />
+        </button>
+      </div>
+
+      <p className="tourist-settings-label">个人与账号</p>
+      <div className="my-section-card">
+        <button className="my-menu-item" onClick={() => go('profile')}>
+          <span className="my-menu-icon green"><Edit3 size={16} /></span>
+          <span className="my-menu-label">编辑游客资料</span>
           <ChevronRight size={16} className="my-menu-arrow" />
         </button>
         <button className="my-menu-item" onClick={() => go('identity-account')}>
@@ -388,7 +529,17 @@ export function TouristMyPage({ go }: Props) {
           <span className="my-menu-label">身份与账号</span>
           <ChevronRight size={16} className="my-menu-arrow" />
         </button>
-        <button className="my-menu-item">
+        <button className="my-menu-item" onClick={() => setShowLanguageSettings(true)}>
+          <span className="my-menu-icon green"><Globe2 size={16} /></span>
+          <span className="my-menu-label">语言</span>
+          <span className="my-menu-value">{locale === 'en' ? 'English' : '中文'}</span>
+          <ChevronRight size={16} className="my-menu-arrow" />
+        </button>
+      </div>
+
+      <p className="tourist-settings-label">支持</p>
+      <div className="my-section-card">
+        <button className="my-menu-item" onClick={() => go('help-feedback')}>
           <span className="my-menu-icon muted"><HelpCircle size={16} /></span>
           <span className="my-menu-label">帮助与反馈</span>
           <ChevronRight size={16} className="my-menu-arrow" />
@@ -408,8 +559,15 @@ export function TouristMyPage({ go }: Props) {
           注销账号
         </button>
       </div>
+      <p className="my-version">拾光旅伴 H5</p>
+      </div>
 
       <BottomNav active="我的" go={go} variant="visitorHome" />
+
+      <LanguageSettingsSheet
+        open={showLanguageSettings}
+        onClose={() => setShowLanguageSettings(false)}
+      />
 
       {showSignOut && (
         <div className="my-modal-overlay" onClick={() => setShowSignOut(false)}>

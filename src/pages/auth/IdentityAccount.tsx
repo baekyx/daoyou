@@ -14,7 +14,12 @@ import { toast } from 'sonner';
 import type { UserRole } from '@/types/types';
 import { useTouristRoomCleanup } from '@/hooks/useTouristRoomCleanup';
 
-interface Props { go: (id: string) => void }
+interface Props {
+  go: (
+    id: string,
+    authOverride?: { authenticated: boolean; role?: string | null },
+  ) => void;
+}
 
 interface RoleOption {
   role: UserRole;
@@ -69,14 +74,15 @@ export function IdentityAccount({ go }: Props) {
 
     toast.success(`已切换为${opt.label}`, { id: 'role-switch' });
     setBusy(null);
-    go(opt.home);
+    // 使用服务端刚确认的新角色覆盖本轮旧 React 闭包，避免被旧角色守卫送回原首页。
+    go(opt.home, { authenticated: true, role: newRole });
   };
 
   return (
     <div className="screen padded-screen ia-screen">
       {/* 顶部导航 */}
       <div className="ia-header">
-        <button className="ia-back" onClick={() => go(
+        <button className="ia-back" aria-label="返回" onClick={() => go(
           currentRole === 'guide' ? 'my'
           : currentRole === 'photographer' ? 'photographer-my'
           : 'tourist-my'
@@ -96,7 +102,11 @@ export function IdentityAccount({ go }: Props) {
         </div>
         <div className="ia-account-info">
           <span className="ia-name">{profile?.nickname ?? '未设置昵称'}</span>
-          <span className="ia-phone">{profile?.phone ? `+86 ${profile.phone}` : '手机号未绑定'}</span>
+          <span className="ia-phone">
+            {profile?.phone
+              ? `+86 ${profile.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}`
+              : '手机号未绑定'}
+          </span>
         </div>
       </div>
 

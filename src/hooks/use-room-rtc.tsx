@@ -16,13 +16,15 @@ import {
 } from 'react';
 import { useWebRTC } from '@/hooks/use-webrtc';
 import type { RtcConnState, RtcStatusInfo } from '@/hooks/use-webrtc';
+import { useBaiduRtc } from '@/hooks/use-baidu-rtc';
 import { useAuth } from '@/contexts/AuthContext';
-import { isTurnConfigured, isRelayForced } from '@/lib/rtcConfig';
+import { isBaiduRtcConfigured, isTurnConfigured, isRelayForced } from '@/lib/rtcConfig';
 import { RoomPresenceProvider, useRoomPresence } from '@/hooks/use-room-presence';
 export { useRoomPresence };
 
 // ─── 向游客页面暴露的收听状态 ─────────────────────────────────
 export type AudioPlayState = 'idle' | 'playing' | 'blocked';
+type ActiveTransport = 'none' | 'baidu' | 'direct';
 
 export interface RoomRtcContextValue {
   /** WebRTC 连接状态 */
@@ -41,6 +43,8 @@ export interface RoomRtcContextValue {
   audioRef: RefObject<HTMLAudioElement | null>;
   /** 用户手势触发：开启/恢复收听（等 srcObject 就绪后调用 play()） */
   playAudio: () => Promise<void>;
+  /** 按语言模式暂停/恢复中文实时原声，不断开 RTC 连接 */
+  setChineseAudioEnabled: (enabled: boolean) => Promise<void>;
   /** 导游端：启动推流 */
   startMic: (stream: MediaStream) => Promise<boolean>;
   /** 导游端：停止推流 */
@@ -74,10 +78,13 @@ function RoomRtcInner({ children }: ProviderProps) {
 
   const [connState, setConnState] = useState<RtcConnState>('idle');
   const [candidateKind, setCandidateKind] = useState('unknown');
-  const [turnConfigured] = useState(isTurnConfigured);
+  const [turnConfigured] = useState(() => isTurnConfigured() || isBaiduRtcConfigured());
   const [relayForced] = useState(isRelayForced);
   const [guideMicOn, setGuideMicOn] = useState(false);
   const [audioPlayState, setAudioPlayState] = useState<AudioPlayState>('idle');
+  const activeTransportRef = useRef<ActiveTransport>('none');
+  const chineseAudioEnabledRef = useRef(true);
+  const audioUnlockedRef = useRef(false);
 
   // <audio> 元素 ref：由 RoomRtcProvider render 的隐藏元素持有
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -101,6 +108,20 @@ function RoomRtcInner({ children }: ProviderProps) {
       onMicStateChange: setGuideMicOn,
       onStatusChange: handleStatusChange,
     });
+  const baiduRtc = useBaiduRtc({
+    roomId: currentRoom?.id ?? '',
+    participantId: user?.id ?? '',
+    role: 'tourist',
+    displayName: (user as any)?.phone ?? user?.id?.slice(0, 6) ?? '游客',
+    onMicStateChange: setGuideMicOn,
+    onStatusChange: handleStatusChange,
+    onPlaybackStateChange: isPlaying => {
+      if (chineseAudioEnabledRef.current) {
+        setAudioPlayState(isPlaying ? 'playing' : 'blocked');
+      }
+    },
+  });
+  const directUnsubRef = useRef<(() => void) | null>(null);
 
   // 记录 nickname，供 reconnect 使用
   const nicknameRef = useRef('游客');
@@ -108,20 +129,49 @@ function RoomRtcInner({ children }: ProviderProps) {
     nicknameRef.current = (user as any)?.phone ?? user?.id?.slice(0, 6) ?? '游客';
   }, [user]);
 
-  // 房间 ready：初始化信令 + 宣告加入
-  useEffect(() => {
-    if (!currentRoom?.id || !user?.id) return;
+  const startDirectFallback = useCallback(() => {
+    activeTransportRef.current = 'direct';
+    setAudioPlayState('idle');
+    directUnsubRef.current?.();
     const { unsub, waitSubscribed, retrySignaling } = initSignaling();
+    directUnsubRef.current = unsub;
     waitSubscribedRef.current = waitSubscribed;
     retrySignalingRef.current = retrySignaling;
     announceJoin(nicknameRef.current, waitSubscribed, retrySignaling);
-    return () => { unsub(); announceLeave(); };
+  }, [announceJoin, initSignaling]);
+
+  // 房间 ready：优先加入百度 RTC；未开通、鉴权失败或 SDK 异常时回退原直连 WebRTC。
+  useEffect(() => {
+    if (!currentRoom?.id || !user?.id) return;
+    let cancelled = false;
+    activeTransportRef.current = 'none';
+    if (baiduRtc.configured) {
+      void baiduRtc.startSubscriber()
+        .then(() => {
+          if (!cancelled) activeTransportRef.current = 'baidu';
+        })
+        .catch(error => {
+          if (cancelled) return;
+          console.warn('[Baidu RTC] 游客加入失败，回退到直连 WebRTC:', error);
+          startDirectFallback();
+        });
+    } else {
+      startDirectFallback();
+    }
+    return () => {
+      cancelled = true;
+      activeTransportRef.current = 'none';
+      baiduRtc.stop();
+      directUnsubRef.current?.();
+      directUnsubRef.current = null;
+      announceLeave();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoom?.id, user?.id]);
 
   // 导游麦克风开启时：若 audio 已有 srcObject 且用户曾授权，尝试恢复播放
   useEffect(() => {
-    if (!guideMicOn) return;
+    if (!guideMicOn || !chineseAudioEnabledRef.current) return;
     const audio = audioRef.current;
     if (!audio?.srcObject) return;
     if (audioPlayState === 'playing') return;
@@ -133,6 +183,16 @@ function RoomRtcInner({ children }: ProviderProps) {
 
   /** 用户手势触发播放 */
   const playAudio = useCallback(async () => {
+    audioUnlockedRef.current = true;
+    if (!chineseAudioEnabledRef.current) {
+      setAudioPlayState('idle');
+      return;
+    }
+    if (activeTransportRef.current === 'baidu') {
+      const didPlay = await baiduRtc.playRemoteAudio();
+      setAudioPlayState(didPlay ? 'playing' : 'blocked');
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) return;
     try {
@@ -141,28 +201,78 @@ function RoomRtcInner({ children }: ProviderProps) {
     } catch {
       setAudioPlayState('blocked');
     }
-  }, []);
+  }, [baiduRtc.configured, baiduRtc.playRemoteAudio]);
+
+  /** 切换语言模式时只暂停/恢复远端中文原声，RTC 连接继续保持。 */
+  const setChineseAudioEnabled = useCallback(async (enabled: boolean) => {
+    chineseAudioEnabledRef.current = enabled;
+    if (!enabled) {
+      if (activeTransportRef.current === 'baidu') {
+        await baiduRtc.setRemoteAudioEnabled(false);
+      } else {
+        audioRef.current?.pause();
+      }
+      setAudioPlayState('idle');
+      return;
+    }
+
+    if (!audioUnlockedRef.current) {
+      setAudioPlayState('idle');
+      return;
+    }
+    if (activeTransportRef.current === 'baidu') {
+      const didPlay = await baiduRtc.setRemoteAudioEnabled(true);
+      setAudioPlayState(didPlay ? 'playing' : 'blocked');
+      return;
+    }
+    const audio = audioRef.current;
+    if (!audio) {
+      setAudioPlayState('idle');
+      return;
+    }
+    try {
+      await audio.play();
+      setAudioPlayState('playing');
+    } catch {
+      setAudioPlayState('blocked');
+    }
+  }, [baiduRtc.setRemoteAudioEnabled]);
 
   /** 游客端重连 */
   const retryConnect = useCallback(() => {
+    if (baiduRtc.configured) {
+      activeTransportRef.current = 'none';
+      baiduRtc.stop();
+      void baiduRtc.startSubscriber()
+        .then(() => {
+          activeTransportRef.current = 'baidu';
+        })
+        .catch(error => {
+          console.warn('[Baidu RTC] 重连失败，回退到直连 WebRTC:', error);
+          startDirectFallback();
+        });
+      return;
+    }
     reconnect(nicknameRef.current, waitSubscribedRef.current, retrySignalingRef.current);
-  }, [reconnect]);
+  }, [baiduRtc.configured, baiduRtc.startSubscriber, baiduRtc.stop, reconnect, startDirectFallback]);
 
   /** 真正离开房间 */
   const leaveRoom = useCallback(() => {
+    activeTransportRef.current = 'none';
+    baiduRtc.stop();
     announceLeave();
     cleanup();
     setConnState('idle');
     setGuideMicOn(false);
     setAudioPlayState('idle');
-  }, [announceLeave, cleanup]);
+  }, [announceLeave, baiduRtc.stop, cleanup]);
 
   return (
     <RoomRtcContext.Provider value={{
       connState, candidateKind, turnConfigured, relayForced,
       guideMicOn, audioPlayState,
       audioRef,
-      playAudio, startMic, stopMic, retryConnect, leaveRoom,
+      playAudio, setChineseAudioEnabled, startMic, stopMic, retryConnect, leaveRoom,
       trackPresence, untrackPresence,
     }}>
       {/* 隐藏的音频元素：纳入 React 树，随 Provider unmount 自动释放 */}

@@ -34,6 +34,10 @@ export interface PresencePayload {
 
 // ─── Context 对外接口 ─────────────────────────────────────────────
 export interface RoomPresenceContextValue {
+  /** 当前在线的非导游成员 user_id 集合（游客 + 摄影师，已去重） */
+  onlineParticipantIds: Set<string>;
+  /** 当前在线非导游成员人数 */
+  participantCount: number;
   /** 当前在线的 tourist user_id 集合（已去重） */
   onlineTouristIds: Set<string>;
   /** 当前在线 tourist 人数（去重后） */
@@ -52,6 +56,8 @@ export function useRoomPresence(): RoomPresenceContextValue {
     // 安全降级：Provider 未挂载时（HMR 重载中间态、单元测试、导游直接渲染等）
     // 返回零值而不是 throw，避免白屏崩溃
     return {
+      onlineParticipantIds: new Set(),
+      participantCount: 0,
       onlineTouristIds: new Set(),
       touristCount: 0,
       trackPresence: () => {},
@@ -71,6 +77,7 @@ interface ProviderProps {
 }
 
 export function RoomPresenceProvider({ children, roomId, userId, role }: ProviderProps) {
+  const [onlineParticipantIds, setOnlineParticipantIds] = useState<Set<string>>(new Set());
   const [onlineTouristIds, setOnlineTouristIds] = useState<Set<string>>(new Set());
 
   // channel ref — 确保每个 Provider 实例只创建一次
@@ -84,13 +91,16 @@ export function RoomPresenceProvider({ children, roomId, userId, role }: Provide
 
   // ── 解析 Presence state → 游客 user_id 去重集合 ───────────────
   const syncState = useCallback((presenceState: Record<string, PresencePayload[]>) => {
-    const ids = new Set<string>();
+    const participantIds = new Set<string>();
+    const touristIds = new Set<string>();
     Object.values(presenceState).forEach(presences => {
       presences.forEach(p => {
-        if (p.role === 'tourist' && p.user_id) ids.add(p.user_id);
+        if (p.role !== 'guide' && p.user_id) participantIds.add(p.user_id);
+        if (p.role === 'tourist' && p.user_id) touristIds.add(p.user_id);
       });
     });
-    setOnlineTouristIds(ids);
+    setOnlineParticipantIds(participantIds);
+    setOnlineTouristIds(touristIds);
   }, []);
 
   // ── 内部：真正执行 ch.track()（仅供 SUBSCRIBED 回调和 trackPresence 调用）──
@@ -161,9 +171,9 @@ export function RoomPresenceProvider({ children, roomId, userId, role }: Provide
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, userId]);
 
-  // ── 游客进入收听页后调用：记录意图，channel 就绪则立即 track ──
+  // ── 游客/摄影师进入房间业务页后调用：记录意图 ──
   const trackPresence = useCallback(() => {
-    if (role !== 'tourist') return;   // 导游不 track
+    if (role === 'guide') return;     // 导游不计入成员在线人数
     if (wantsTracked.current) return; // 已记录意图，防重入
     wantsTracked.current = true;
 
@@ -188,9 +198,11 @@ export function RoomPresenceProvider({ children, roomId, userId, role }: Provide
   }, []);
 
   const touristCount = onlineTouristIds.size;
+  const participantCount = onlineParticipantIds.size;
 
   return (
     <RoomPresenceContext.Provider value={{
+      onlineParticipantIds, participantCount,
       onlineTouristIds, touristCount, trackPresence, untrackPresence,
     }}>
       {children}

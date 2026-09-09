@@ -1,0 +1,302 @@
+[
+  {
+    "screen": "room-list",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - paragraph: 你好，旅行者 👋 - heading \"发现讲解\" [level=1] - generic: 选择正在进行的房间，开始实时收听。 - textbox \"搜索房间号或房间"
+  },
+  {
+    "screen": "recent-rooms",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - heading \"最近记录\" [level=1] - paragraph: 重新进入有效房间，或回看已保存的字幕。 - region \"进行中\": - strong: 进行中 - generi"
+  },
+  {
+    "screen": "password",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 午门建筑漫游 - button \"中\" - button \"EN\" - button \"双语\" - button \"字幕设置\": - generic"
+  },
+  {
+    "screen": "tourist-my",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - strong: 我的 - button \"编辑游客资料\": - img \"头像\" - button \"更换头像\": - heading \"测试游客\" [level=2] - text: 游客模"
+  },
+  {
+    "screen": "listening",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 午门建筑漫游 - button \"中\" - button \"EN\" - button \"双语\" - button \"字幕设置\": - generic"
+  },
+  {
+    "screen": "subtitle-tab",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - generic: 字幕 - button \"中\" - button \"EN\" - button \"双语\" - button \"A\" - button \"A\" - button \"A\" - pa"
+  },
+  {
+    "screen": "subtitle-history",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 会议纪要 - region \"会议纪要\": - generic: 会议纪要 - generic: 1 条字幕生成 - generic: 已生成 - "
+  },
+  {
+    "screen": "room-album",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - strong: 相册 - button \"刷新\": - generic: 午门建筑漫游 - generic: 0 张照片 - paragraph: 照片还在路上 - generic: 摄影师上"
+  },
+  {
+    "screen": "room-photo-detail",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong - button \"保存\": - generic: 保存 - button \"分享\": - generic: 分享 - button \"收藏\": - "
+  },
+  {
+    "screen": "question",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 午门建筑漫游 - button \"中\" - button \"EN\" - button \"双语\" - paragraph: 导游正在讲解，请输入您的问"
+  },
+  {
+    "screen": "subtitle-settings",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 字幕与翻译 - paragraph: - text: 中文模式播放中文原声；英文和双语模式播放英文合成语音，避免声音重叠。 - generic: 中"
+  },
+  {
+    "screen": "card-alert",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - strong: 收听中 - heading \"导游正在讲解\" [level=2] - paragraph: 各位游客，欢迎来到故宫紫禁城…… - generic: 导游刚刚推送 - headi"
+  },
+  {
+    "screen": "tourist-card-library",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 景点卡片 - paragraph: 午门建筑漫游 · 导游已推送 0 张 - paragraph: 暂无景点卡片 - generic: 导游推送后会"
+  },
+  {
+    "screen": "tourist-card-detail",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: KC 原卡预览 - article: - heading \"景区卡片\" [level=1] - separator - text: 我的 KC 原始"
+  },
+  {
+    "screen": "tourist-room-card-detail",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 卡片详情 - paragraph: 找不到该卡片 - generic: 请返回重试，或联系导游重新推送 - button \"返回\" - status"
+  },
+  {
+    "screen": "tourist-notifications",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 消息通知 - button \"全部已读\": - text: 全部已读 - button \"“午门建筑漫游”正在讲解 点击继续收听 8/3 09:20"
+  },
+  {
+    "screen": "tourist-help",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 帮助与反馈 - generic: 常见问题 - button \"实时字幕为什么只显示 50 条？\": - generic: 实时字幕为什么只显示 5"
+  },
+  {
+    "screen": "tourist-profile-edit",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - strong: 编辑个人资料 - heading \"头像\" [level=3] - button \"更换头像\": - paragraph: 点击头像可更换照片 - heading \"性别\" ["
+  },
+  {
+    "screen": "tourist-identity-account",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\": - strong: 身份与账号 - img \"头像\" - generic: 测试游客 - generic: +86 138****8000 - generic: 选择"
+  },
+  {
+    "screen": "tourist-weak-net",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 午门建筑漫游 - button \"中\" - button \"EN\" - button \"双语\" - button \"字幕设置\": - generic"
+  },
+  {
+    "screen": "tourist-room-ended",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 午门建筑漫游 - button \"中\" - button \"EN\" - button \"双语\" - button \"字幕设置\": - generic"
+  },
+  {
+    "screen": "album",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 旅行相册 - button \"全部日期\": - text: 全部日期 - text: 筛选 - paragraph: 暂无照片 - status: "
+  },
+  {
+    "screen": "photo",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 0 / 0 - status: - strong: 照片暂时不可用 - generic: 请返回相册刷新后重试 - strong - generic"
+  },
+  {
+    "screen": "photographer-tasks",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - paragraph: 你好，测试摄影师 👋 - heading \"拍摄任务\" [level=1] - generic: 管理已加入房间，继续上传现场照片。 - region \"我的任务\": "
+  },
+  {
+    "screen": "photo-join",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 加入房间 - paragraph: 输入房间号与密码即可加入；加入状态会保留，之后可从任务列表继续上传。 - generic: 房间号 - text"
+  },
+  {
+    "screen": "photo-join-password",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 验证密码 - heading \"午门建筑漫游\" [level=3] - paragraph: 房间号 401640 - paragraph: 请输入"
+  },
+  {
+    "screen": "photo-wait",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 验证房间密码 - heading \"午门建筑漫游\" [level=3] - paragraph: 房间号 401640 - heading \"无需等"
+  },
+  {
+    "screen": "upload",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 上传照片 - generic: 当前任务 - strong: 午门建筑漫游 - generic: 房间号 401640 - button \"选择照片"
+  },
+  {
+    "screen": "photographer-album",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - heading \"我的相册\" [level=1] - paragraph: 管理你在各房间上传的照片 - paragraph: 还没有上传照片 - generic: 使用房间密码加入后，可以在"
+  },
+  {
+    "screen": "photo-delete",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 删除照片 - img \"待删除照片\" - paragraph: 删除后，游客将无法继续看到这张照片。此操作不可撤销。 - button \"确认删除\""
+  },
+  {
+    "screen": "photographer-my",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - strong: 我的 - button \"编辑资料\": - img \"头像\" - button \"更换头像\": - heading \"测试摄影师\" [level=2] - text: 摄影师 "
+  },
+  {
+    "screen": "identity-account",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\": - strong: 身份与账号 - img \"头像\" - generic: 测试摄影师 - generic: +86 138****8000 - generic: 选"
+  },
+  {
+    "screen": "photographer-storage",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 存储与网络 - generic: 当前网络 - generic: 网络已连接 - generic: 在线 - paragraph: 当前浏览器无法识"
+  },
+  {
+    "screen": "photographer-privacy",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 隐私与权限 - generic: 应用权限 - generic: 拍照 / 相册 - generic: 上传时由系统文件选择器提供拍照或选图入口 -"
+  },
+  {
+    "screen": "photographer-help",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 帮助与反馈 - generic: 常见问题 - button \"如何加入房间？\": - generic: 如何加入房间？ - button \"加入后"
+  },
+  {
+    "screen": "guide-home",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - paragraph: 你好，测试导游 👋 - heading \"我的讲解房\" [level=1] - generic: 用声音传递文化，让旅程更有温度 - generic: \"3\" - ge"
+  },
+  {
+    "screen": "create-room",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 创建讲解房 - heading \"你有一个讲解中的房间\" [level=2] - paragraph: - text: 同一时间只能有一个进行中的讲"
+  },
+  {
+    "screen": "room-success",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 创建成功 - region \"房间创建成功\": - heading \"房间创建成功\" [level=2] - paragraph: 游客可通过房间号"
+  },
+  {
+    "screen": "guide-live",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 午门建筑漫游 - button \"解散房间\": - paragraph: 房间号 401640 · 在线 3 人 - generic: 房间密码 -"
+  },
+  {
+    "screen": "end-result",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - heading \"讲解已结束\" [level=2] - paragraph: 感谢您的精彩讲解！字幕记录与相册已为游客保留。 - generic: 60 分钟 - generic: 讲解时长 "
+  },
+  {
+    "screen": "guest-list",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 游客列表 - generic: \"3\" - text: 在线 - generic: \"0\" - text: 历史人数 - button \"全部成员\""
+  },
+  {
+    "screen": "guide-subtitle-record",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 字幕记录 - paragraph: 以下为本次讲解的全部字幕，共 0 条；实时讲解页仅保留最新 50 条。 - paragraph: 暂无字幕记录 "
+  },
+  {
+    "screen": "kc-library",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 景区知识卡片 - button \"新建\": - textbox \"搜索卡片名称…\" - button \"全部\" - button \"景点导览\" - "
+  },
+  {
+    "screen": "kc-detail",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 景区介绍 - paragraph: 卡片加载中 - status: console-errors:0"
+  },
+  {
+    "screen": "records",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - generic: 讲解归档 - heading \"讲解记录\" [level=1] - paragraph: 管理已创建房间，继续讲解或回顾会议纪要。 - tablist \"房间状态筛选\": -"
+  },
+  {
+    "screen": "record-detail",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 讲解记录 - generic: 讲解会议纪要 - heading \"故宫文化探索讲解纪要\" [level=2] - generic: \"01\" - "
+  },
+  {
+    "screen": "guide-subtitle-settings",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 字幕与翻译 - paragraph: - text: 中文模式播放中文原声；英文和双语模式播放英文合成语音，避免声音重叠。 - generic: 中"
+  },
+  {
+    "screen": "guide-notifications",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 消息通知 - button \"全部已读\": - text: 全部已读 - button \"“午门建筑漫游”正在讲解 点击继续讲解 8/3 09:20"
+  },
+  {
+    "screen": "guide-help",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 帮助与反馈 - generic: 常见问题 - button \"实时字幕为什么只显示 50 条？\": - generic: 实时字幕为什么只显示 5"
+  },
+  {
+    "screen": "guide-my",
+    "blank": false,
+    "console": "0",
+    "text": "- main \"游客端正式组件视觉验收\": - button \"返回\" - strong: 我的 - button \"编辑资料\": - img \"头像\" - button \"更换头像\": - heading \"测试导游\" [level=2]"
+  }
+]

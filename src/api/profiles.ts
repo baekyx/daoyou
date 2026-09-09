@@ -7,8 +7,8 @@
  *   调用方须为该房导游或有效成员，禁止传任意 user_id 枚举。
  * - fetchRoomMembersSafe()：通过 RPC get_room_members_safe() 读取房间成员列表（left_at IS NULL）
  *   与旧 fetchRoomMembers 返回结构兼容，替换 GuideScreens/GuideExtra 运行时调用。
- * - fetchRoomMemberHistory()：通过 RPC get_room_member_history_safe() 读取全部 tourist 历史成员
- *   不过滤 left_at，仅导游可调用；GuestList 历史列表数据源。
+ * - fetchRoomMemberHistory()：读取除导游外所有进入过房间的成员，
+ *   合并 room_members 与 approved memberships，并按 user_id 去重。
  *
  * Cutover 待撤销清单：
  *   - roomActivity.ts fetchRoomMembers 定义（暂保留，页面已切换到 fetchRoomMembersSafe）
@@ -79,47 +79,159 @@ export async function fetchRoomMembersSafe(roomId: string): Promise<RoomMember[]
   }));
 }
 
-/**
- * 房间全量历史成员读取（通过 SECURITY DEFINER RPC get_room_member_history_safe）
- * 仅该房导游可调用；返回全部 role=tourist 成员，不按 left_at 过滤，按 joined_at ASC。
- * 用于 GuestList 历史列表——在线状态由 Presence 单独提供，不依赖 left_at 判断。
- *
- * 错误策略（v379）：
- *   - RPC error 必须抛出，不伪装为 []，让调用方区分"真正 0 条"和"查询失败"；
- *   - data 为 null/empty 时正常返回 []。
- */
-export async function fetchRoomMemberHistory(roomId: string): Promise<RoomMember[]> {
-  const { data, error } = await supabase.rpc("get_room_member_history_safe", {
-    p_room_id: roomId,
-  });
-  if (error) {
-    // 输出完整诊断信息（不含敏感字段），让调用方决策重试还是终止
-    console.error('[GuestListHistory] RPC error', {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-    });
-    throw error;
-  }
-  if (!data) return [];
-  return (data as Array<{
-    id: string; room_id: string; user_id: string; role: string;
-    joined_at: string; left_at: string | null;
-    profile_id: string | null; profile_username: string | null;
-    profile_nickname: string | null; profile_avatar_url: string | null;
-  }>).map(row => ({
+type HistoryRow = {
+  id: string;
+  room_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  left_at: string | null;
+  profile_id?: string | null;
+  profile_username?: string | null;
+  profile_nickname?: string | null;
+  profile_avatar_url?: string | null;
+  profile?: {
+    id: string;
+    username: string | null;
+    nickname: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
+function mapHistoryRow(row: HistoryRow): RoomMember {
+  const profile = row.profile ?? (row.profile_id ? {
+    id: row.profile_id,
+    username: row.profile_username ?? '',
+    nickname: row.profile_nickname ?? null,
+    avatar_url: row.profile_avatar_url ?? null,
+  } : null);
+  return {
     id: row.id,
     room_id: row.room_id,
     user_id: row.user_id,
     role: row.role as RoomMember["role"],
     joined_at: row.joined_at,
     left_at: row.left_at,
-    profile: row.profile_id ? {
-      id: row.profile_id,
-      username: row.profile_username ?? '',
-      nickname: row.profile_nickname,
-      avatar_url: row.profile_avatar_url,
+    profile: profile ? {
+      id: profile.id,
+      username: profile.username ?? '',
+      nickname: profile.nickname,
+      avatar_url: profile.avatar_url,
     } : undefined,
+  };
+}
+
+async function fetchRoomMembersHistoryDirect(roomId: string): Promise<RoomMember[]> {
+  const { data, error } = await supabase
+    .from("room_members")
+    .select("id, room_id, user_id, role, joined_at, left_at")
+    .eq("room_id", roomId)
+    .neq("role", "guide")
+    .order("joined_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as HistoryRow[];
+  const ids = [...new Set(rows.map(row => row.user_id))];
+  if (ids.length === 0) return [];
+
+  // 不使用跨表嵌套查询：不同 Supabase schema cache 版本可能无法解析
+  // room_members_user_id_fkey，导致整个游客列表直接失败。
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,username,nickname,avatar_url")
+    .in("id", ids);
+  if (profilesError) {
+    console.warn("[GuestListHistory] profile lookup failed", profilesError.message);
+  }
+  const profileById = new Map((profiles ?? []).map(profile => [profile.id, profile]));
+  return rows.map(row => mapHistoryRow({
+    ...row,
+    profile: profileById.get(row.user_id) ?? null,
   }));
+}
+
+async function fetchPhotographerHistoryDirect(roomId: string): Promise<RoomMember[]> {
+  const { data, error } = await supabase
+    .from("memberships")
+    .select("id, room_id, user_id, role, joined_at, left_at")
+    .eq("room_id", roomId)
+    .eq("approval_status", "approved")
+    .neq("role", "guide")
+    .order("joined_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as HistoryRow[];
+  const ids = [...new Set(rows.map(row => row.user_id))];
+  if (ids.length === 0) return [];
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id,username,nickname,avatar_url")
+    .in("id", ids);
+  if (profilesError) {
+    // 摄影师身份仍可展示；昵称缺失不能阻断全部历史游客。
+    console.warn("[GuestListHistory] photographer profile lookup failed", profilesError.message);
+  }
+  const profileById = new Map((profiles ?? []).map(profile => [profile.id, profile]));
+  return rows.map(row => mapHistoryRow({
+    ...row,
+    profile: profileById.get(row.user_id) ?? null,
+  }));
+}
+
+/**
+ * 房间全量历史成员读取。
+ * - room_members：游客等常规房间成员；
+ * - memberships：已通过密码加入的摄影师；
+ * - 排除 guide，并以 user_id 去重；
+ * - 在线状态由 Presence 单独提供，不依赖 left_at。
+ *
+ * 兼容策略：
+ *   - 优先调用历史成员 RPC；
+ *   - 当前数据库尚未部署/授权 RPC 时，回退到受 RLS 保护的表查询；
+ *   - 摄影师历史读取失败不阻断游客历史显示；
+ *   - 所有历史来源均失败时才抛错，避免把查询失败伪装成 0 人。
+ */
+export async function fetchRoomMemberHistory(roomId: string): Promise<RoomMember[]> {
+  const { data, error } = await supabase.rpc("get_room_member_history_safe", {
+    p_room_id: roomId,
+  });
+  if (error) {
+    console.warn("[GuestListHistory] RPC unavailable, using RLS fallback", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+  }
+
+  let roomMembers: RoomMember[];
+  if (!error) {
+    roomMembers = ((data ?? []) as HistoryRow[]).map(mapHistoryRow);
+  } else {
+    roomMembers = await fetchRoomMembersHistoryDirect(roomId);
+  }
+
+  let photographers: RoomMember[] = [];
+  try {
+    photographers = await fetchPhotographerHistoryDirect(roomId);
+  } catch (photographerError) {
+    console.warn(
+      "[GuestListHistory] photographer history unavailable",
+      photographerError instanceof Error ? photographerError.message : photographerError,
+    );
+  }
+
+  const byUserId = new Map<string, RoomMember>();
+  [...roomMembers, ...photographers]
+    .filter(member => member.role !== "guide")
+    .sort((a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime())
+    .forEach(member => {
+      const existing = byUserId.get(member.user_id);
+      if (!existing) {
+        byUserId.set(member.user_id, member);
+        return;
+      }
+      if (member.role === "photographer" && existing.role !== "photographer") {
+        byUserId.set(member.user_id, { ...member, joined_at: existing.joined_at });
+      }
+    });
+  return [...byUserId.values()];
 }

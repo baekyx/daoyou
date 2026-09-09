@@ -64,12 +64,28 @@ export async function fetchGuideRooms(_guideId?: string): Promise<Room[]> {
   return arr.map(parseRoomJson).filter((r): r is Room => r !== null);
 }
 
+/** 获取导游房间；失败时抛错，供需要区分“空数据”和“请求失败”的页面使用。 */
+export async function fetchGuideRoomsStrict(): Promise<Room[]> {
+  const { data, error } = await supabase.rpc("get_guide_rooms_secure");
+  if (error) throw new Error(error.message || "房间列表读取失败");
+  const arr = Array.isArray(data) ? data : [];
+  return arr.map(parseRoomJson).filter((room): room is Room => room !== null);
+}
+
 /** 获取所有 live/pending 房间（游客查看，安全版，不含 password） */
 export async function fetchActiveRooms(): Promise<Room[]> {
   const { data, error } = await supabase.rpc("get_active_rooms_secure");
   if (error || !data) return [];
   const arr = Array.isArray(data) ? data : (data as unknown[]);
   return arr.map(parseRoomJson).filter((r): r is Room => r !== null);
+}
+
+/** 获取可加入房间；失败时抛错，避免把服务异常误显示成“暂无房间”。 */
+export async function fetchActiveRoomsStrict(): Promise<Room[]> {
+  const { data, error } = await supabase.rpc("get_active_rooms_secure");
+  if (error) throw new Error(error.message || "进行中房间加载失败");
+  const arr = Array.isArray(data) ? data : [];
+  return arr.map(parseRoomJson).filter((room): room is Room => room !== null);
 }
 
 /** 按房间号查找房间（安全版，不含 password） */
@@ -101,11 +117,33 @@ export async function updateRoomStatus(
   status: "pending" | "live" | "ended",
   extra?: { started_at?: string; ended_at?: string; actual_duration?: number }
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("rooms")
     .update({ status, ...extra })
-    .eq("id", roomId);
-  return { error: error?.message ?? null };
+    .eq("id", roomId)
+    .select("id,status")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "房间不存在、无更新权限或状态未写入" };
+  if (data.status !== status) return { error: `房间状态确认失败：期望 ${status}，实际 ${data.status}` };
+  return { error: null };
+}
+
+/** 讲解过程中只持久化有效讲解分钟数，不改变房间状态。 */
+export async function updateRoomDuration(
+  roomId: string,
+  actualDuration: number,
+): Promise<{ error: string | null }> {
+  const normalized = Math.max(0, Math.floor(actualDuration));
+  const { data, error } = await supabase
+    .from("rooms")
+    .update({ actual_duration: normalized })
+    .eq("id", roomId)
+    .select("id,actual_duration")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "房间不存在、无更新权限或时长未写入" };
+  return { error: null };
 }
 
 /** 更新房间在线人数 */

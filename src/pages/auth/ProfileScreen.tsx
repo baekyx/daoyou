@@ -1,6 +1,10 @@
 // Profile 改用 useAvatarUploadFlow，删除本地重复的选图/校验/revoke/上传逻辑
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, Check, UserRound, ChevronRight, LogOut, Edit3, Shield, Bell, HelpCircle, X, Phone, KeyRound, Landmark, Images, History } from 'lucide-react';
+import {
+  Camera, Check, UserRound, ChevronRight, LogOut, Edit3, Shield, Bell,
+  HelpCircle, X, Phone, KeyRound, Landmark, Images, History, Compass,
+  Backpack, HardDrive, ShieldCheck, BadgeCheck, Globe2,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateProfile } from '@/api/users';
 import { toast } from 'sonner';
@@ -8,6 +12,8 @@ import { BottomNav } from '@/pages/guide/GuideScreens';
 import { AvatarCropModal } from '@/components/AvatarCropModal';
 import { useAvatarUploadFlow, AVATAR_ACCEPT } from '@/hooks/useAvatarUploadFlow';
 import { supabase } from '@/db/supabase';
+import { LanguageSettingsSheet } from '@/components/LanguageSettingsSheet';
+import { useAppLanguage } from '@/i18n/AppLanguageContext';
 
 interface Props { go: (id: string) => void }
 
@@ -224,9 +230,14 @@ export function Profile({ go }: Props) {
 // ─── 我的页面 ─────────────────────────────────────────
 export function MyPage({ go }: Props) {
   const { user, profile, signOut, refreshProfile, setCurrentRoom, sendPhoneOtp, updatePhone } = useAuth();
+  const { locale, resetLocaleForDeletedAccount } = useAppLanguage();
   const role: Role = (profile?.role as Role) ?? 'tourist';
   const roleLabel = role === 'guide' ? '导游' : role === 'photographer' ? '摄影师' : '游客';
-  const roleIcon = role === 'guide' ? '🧭' : role === 'photographer' ? '📷' : '🎒';
+  const roleIcon = role === 'guide'
+    ? <Compass size={14} aria-hidden="true" />
+    : role === 'photographer'
+      ? <Camera size={14} aria-hidden="true" />
+      : <Backpack size={14} aria-hidden="true" />;
 
   // 编辑模态框状态
   const [editing, setEditing] = useState(false);
@@ -238,6 +249,7 @@ export function MyPage({ go }: Props) {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [showLanguageSettings, setShowLanguageSettings] = useState(false);
 
   // 头像上传共用 hook
   const {
@@ -367,6 +379,7 @@ export function MyPage({ go }: Props) {
         'shiguang-wifi-only',
         'shiguang-cache-hint',
       ].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k); });
+      resetLocaleForDeletedAccount();
       setCurrentRoom(null);
       await signOut();
       go('login');
@@ -380,7 +393,8 @@ export function MyPage({ go }: Props) {
   const navVariant = role === 'guide' ? 'guide' : role === 'photographer' ? 'photographer' : 'tour';
 
   return (
-    <div className="screen padded-screen has-tabbar my-page">
+    <div className={`screen padded-screen has-tabbar my-page ${role === 'photographer' ? 'photographer-my-screen' : role === 'guide' ? 'guide-my-screen' : ''}`}>
+      <div className={role === 'photographer' ? 'photographer-page-scroll' : 'my-page-scroll-pass-through'}>
       {/* 顶部导航：摄影师无返回箭头（底部导航已可切换），其他角色保留 */}
       <div className="mini-header">
         {role !== 'photographer'
@@ -413,87 +427,178 @@ export function MyPage({ go }: Props) {
       </div>
 
       {/* 账号信息卡片 */}
-      <div className="my-section-card">
-        <h3 className="my-section-title">账号信息</h3>
-        <div className="my-info-row">
-          <span className="my-info-label">昵称</span>
-          <span className="my-info-value">{profile?.nickname ?? '—'}</span>
+      <section className="my-account-section" aria-labelledby="my-account-title">
+        <h3 id="my-account-title" className="my-section-title my-account-title">账号信息</h3>
+        <div className="my-section-card my-account-card">
+          <div className="my-info-row">
+            <span className="my-info-label">昵称</span>
+            <span className="my-info-value">{profile?.nickname ?? '—'}</span>
+          </div>
+          <div className="my-info-row">
+            <span className="my-info-label">手机号</span>
+            <span className="my-info-value">{profile?.phone ? profile.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '—'}</span>
+          </div>
+          <div className="my-info-row">
+            <span className="my-info-label">性别</span>
+            <span className="my-info-value">{profile?.gender === 'male' ? '男' : profile?.gender === 'female' ? '女' : '—'}</span>
+          </div>
+          <div className="my-info-row">
+            <span className="my-info-label">身份</span>
+            <span className="my-info-value my-role-badge">{roleIcon} {roleLabel}</span>
+          </div>
         </div>
-        <div className="my-info-row">
-          <span className="my-info-label">手机号</span>
-          <span className="my-info-value">{profile?.phone ? profile.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '—'}</span>
-        </div>
-        <div className="my-info-row">
-          <span className="my-info-label">性别</span>
-          <span className="my-info-value">{profile?.gender === 'male' ? '男' : profile?.gender === 'female' ? '女' : '—'}</span>
-        </div>
-        <div className="my-info-row">
-          <span className="my-info-label">身份</span>
-          <span className="my-info-value my-role-badge">{roleIcon} {roleLabel}</span>
-        </div>
-      </div>
+      </section>
 
-      {/* 功能列表 */}
-      <div className="my-section-card my-menu-card">
-        <button className="my-menu-item" onClick={() => setEditing(true)}>
-          <span className="my-menu-icon green"><Edit3 size={16} /></span>
-          <span className="my-menu-label">编辑个人资料</span>
-          <ChevronRight size={16} className="my-menu-arrow" />
-        </button>
-        <button className="my-menu-item" onClick={() => go('identity-account')}>
-          <span className="my-menu-icon blue"><UserRound size={16} /></span>
-          <span className="my-menu-label">身份与账号</span>
-          <ChevronRight size={16} className="my-menu-arrow" />
-        </button>
-        {role === 'guide' && (
-          <button className="my-menu-item" onClick={() => { sessionStorage.setItem('kc_library_from', 'my'); go('kc-library'); }}>
-            <span className="my-menu-icon amber"><Landmark size={16} /></span>
-            <span className="my-menu-label">景区卡片库</span>
+      {/* 功能列表：摄影师按任务语义分组，其他角色保持原有结构。 */}
+      {role === 'photographer' ? (
+        <div className="photographer-settings-groups">
+          <section className="photographer-settings-group" aria-labelledby="photographer-account-settings">
+            <h3 id="photographer-account-settings">个人与账号</h3>
+            <div className="my-section-card my-menu-card">
+              <button className="my-menu-item" onClick={() => setEditing(true)}>
+                <span className="my-menu-icon green"><Edit3 size={16} /></span>
+                <span className="my-menu-label">编辑个人资料</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => go('identity-account')}>
+                <span className="my-menu-icon blue"><BadgeCheck size={16} /></span>
+                <span className="my-menu-label">身份与账号</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => setShowLanguageSettings(true)}>
+                <span className="my-menu-icon green"><Globe2 size={16} /></span>
+                <span className="my-menu-label">语言</span>
+                <span className="my-menu-value">{locale === 'en' ? 'English' : '中文'}</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+            </div>
+          </section>
+
+          <section className="photographer-settings-group" aria-labelledby="photographer-device-settings">
+            <h3 id="photographer-device-settings">设备与隐私</h3>
+            <div className="my-section-card my-menu-card">
+              <button className="my-menu-item" onClick={() => go('photographer-storage')}>
+                <span className="my-menu-icon blue"><HardDrive size={16} /></span>
+                <span className="my-menu-label">存储与网络</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => go('photographer-privacy')}>
+                <span className="my-menu-icon green"><ShieldCheck size={16} /></span>
+                <span className="my-menu-label">隐私与权限</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+            </div>
+          </section>
+
+          <section className="photographer-settings-group" aria-labelledby="photographer-support-settings">
+            <h3 id="photographer-support-settings">支持</h3>
+            <div className="my-section-card my-menu-card">
+              <button className="my-menu-item" onClick={() => go('photographer-help')}>
+                <span className="my-menu-icon muted"><HelpCircle size={16} /></span>
+                <span className="my-menu-label">帮助与反馈</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : role === 'guide' ? (
+        <div className="guide-settings-groups">
+          <section className="guide-settings-group" aria-labelledby="guide-account-settings">
+            <h3 id="guide-account-settings">个人与账号</h3>
+            <div className="my-section-card my-menu-card">
+              <button className="my-menu-item" onClick={() => setEditing(true)}>
+                <span className="my-menu-icon green"><Edit3 size={16} /></span>
+                <span className="my-menu-label">编辑个人资料</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => go('identity-account')}>
+                <span className="my-menu-icon blue"><BadgeCheck size={16} /></span>
+                <span className="my-menu-label">身份与账号</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => setShowLanguageSettings(true)}>
+                <span className="my-menu-icon green"><Globe2 size={16} /></span>
+                <span className="my-menu-label">语言</span>
+                <span className="my-menu-value">{locale === 'en' ? 'English' : '中文'}</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+            </div>
+          </section>
+
+          <section className="guide-settings-group" aria-labelledby="guide-content-settings">
+            <h3 id="guide-content-settings">讲解与内容</h3>
+            <div className="my-section-card my-menu-card">
+              <button className="my-menu-item" onClick={() => { sessionStorage.setItem('kc_library_from', 'my'); go('kc-library'); }}>
+                <span className="my-menu-icon amber"><Landmark size={16} /></span>
+                <span className="my-menu-label">景区卡片库</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => go('guide-subtitle-settings')}>
+                <span className="my-menu-icon blue"><Shield size={16} /></span>
+                <span className="my-menu-label">字幕偏好设置</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+              <button className="my-menu-item" onClick={() => go('notifications')}>
+                <span className="my-menu-icon amber"><Bell size={16} /></span>
+                <span className="my-menu-label">消息通知</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+            </div>
+          </section>
+
+          <section className="guide-settings-group" aria-labelledby="guide-support-settings">
+            <h3 id="guide-support-settings">支持</h3>
+            <div className="my-section-card my-menu-card">
+              <button className="my-menu-item" onClick={() => go('help-feedback')}>
+                <span className="my-menu-icon muted"><HelpCircle size={16} /></span>
+                <span className="my-menu-label">帮助与反馈</span>
+                <ChevronRight size={16} className="my-menu-arrow" />
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="my-section-card my-menu-card">
+          <button className="my-menu-item" onClick={() => setEditing(true)}>
+            <span className="my-menu-icon green"><Edit3 size={16} /></span>
+            <span className="my-menu-label">编辑个人资料</span>
             <ChevronRight size={16} className="my-menu-arrow" />
           </button>
-        )}
-        {role !== 'photographer' && (
+          <button className="my-menu-item" onClick={() => go('identity-account')}>
+            <span className="my-menu-icon blue"><BadgeCheck size={16} /></span>
+            <span className="my-menu-label">身份与账号</span>
+            <ChevronRight size={16} className="my-menu-arrow" />
+          </button>
+          <button className="my-menu-item" onClick={() => setShowLanguageSettings(true)}>
+            <span className="my-menu-icon green"><Globe2 size={16} /></span>
+            <span className="my-menu-label">语言</span>
+            <span className="my-menu-value">{locale === 'en' ? 'English' : '中文'}</span>
+            <ChevronRight size={16} className="my-menu-arrow" />
+          </button>
+          {role === 'guide' && (
+            <button className="my-menu-item" onClick={() => { sessionStorage.setItem('kc_library_from', 'my'); go('kc-library'); }}>
+              <span className="my-menu-icon amber"><Landmark size={16} /></span>
+              <span className="my-menu-label">景区卡片库</span>
+              <ChevronRight size={16} className="my-menu-arrow" />
+            </button>
+          )}
           <button className="my-menu-item" onClick={() => go(role === 'guide' ? 'guide-subtitle-settings' : 'subtitle-settings')}>
             <span className="my-menu-icon blue"><Shield size={16} /></span>
             <span className="my-menu-label">字幕偏好设置</span>
             <ChevronRight size={16} className="my-menu-arrow" />
           </button>
-        )}
-        {role !== 'photographer' && (
-          <button className="my-menu-item">
+          <button className="my-menu-item" onClick={() => go('notifications')}>
             <span className="my-menu-icon amber"><Bell size={16} /></span>
             <span className="my-menu-label">消息通知</span>
             <ChevronRight size={16} className="my-menu-arrow" />
           </button>
-        )}
-        {role !== 'photographer' && (
-          <button className="my-menu-item">
+          <button className="my-menu-item" onClick={() => go('help-feedback')}>
             <span className="my-menu-icon muted"><HelpCircle size={16} /></span>
             <span className="my-menu-label">帮助与反馈</span>
             <ChevronRight size={16} className="my-menu-arrow" />
           </button>
-        )}
-        {/* 摄影师专属：设置菜单直接内嵌在同一卡片 */}
-        {role === 'photographer' && (
-          <>
-            <button className="my-menu-item" onClick={() => go('photographer-storage')}>
-              <span className="my-menu-icon blue"><Images size={16} /></span>
-              <span className="my-menu-label">存储与网络</span>
-              <ChevronRight size={16} className="my-menu-arrow" />
-            </button>
-            <button className="my-menu-item" onClick={() => go('photographer-privacy')}>
-              <span className="my-menu-icon green"><Landmark size={16} /></span>
-              <span className="my-menu-label">隐私与权限</span>
-              <ChevronRight size={16} className="my-menu-arrow" />
-            </button>
-            <button className="my-menu-item" onClick={() => go('photographer-help')}>
-              <span className="my-menu-icon muted"><HelpCircle size={16} /></span>
-              <span className="my-menu-label">帮助与反馈</span>
-              <ChevronRight size={16} className="my-menu-arrow" />
-            </button>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 退出登录 */}
       <button
@@ -517,7 +622,14 @@ export function MyPage({ go }: Props) {
 
       <p className="my-version">拾光旅伴 v1.0.0</p>
 
+      </div>
+
       <BottomNav active="我的" go={go} variant={navVariant} />
+
+      <LanguageSettingsSheet
+        open={showLanguageSettings}
+        onClose={() => setShowLanguageSettings(false)}
+      />
 
       {/* ─── 编辑资料模态框 ─── */}
       {editing && (

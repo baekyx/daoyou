@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f6f0" />
+  <title>拾光旅伴 · 流式字幕链路测试</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #153b2c;
+      --muted: #72857d;
+      --line: #d7e4dc;
+      --green: #188451;
+      --green-soft: #e6f3eb;
+      --paper: #f7f6f0;
+      --card: #ffffff;
+      --warn: #a66013;
+      --danger: #c43d3d;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      background: var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    .shell {
+      width: min(100%, 460px);
+      min-height: 100svh;
+      margin: 0 auto;
+      padding: max(24px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 8vw, 38px);
+      line-height: 1.1;
+      letter-spacing: -.04em;
+      text-wrap: balance;
+    }
+    .intro {
+      margin: 12px 0 24px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+      text-wrap: pretty;
+    }
+    .card {
+      margin-top: 14px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: 0 12px 32px rgba(30, 72, 53, .06);
+    }
+    .status-row, .card-head, .metrics, .actions {
+      display: flex;
+      align-items: center;
+    }
+    .status-row { gap: 10px; }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #aeb8b3;
+      box-shadow: 0 0 0 6px #edf0ee;
+    }
+    .status-dot.live {
+      background: var(--green);
+      box-shadow: 0 0 0 6px var(--green-soft);
+    }
+    .status-copy strong { display: block; font-size: 16px; }
+    .status-copy span { color: var(--muted); font-size: 13px; }
+    label {
+      display: block;
+      margin: 18px 0 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+    input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      color: var(--ink);
+      background: #fbfcfb;
+      font-size: 13px;
+    }
+    input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+    .metrics {
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .metric {
+      min-width: 0;
+      flex: 1;
+      padding: 13px 10px;
+      border-radius: 15px;
+      background: #f2f7f4;
+      text-align: center;
+    }
+    .metric b { display: block; font-size: 20px; line-height: 1; }
+    .metric span { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .actions { gap: 10px; margin-top: 16px; }
+    button {
+      min-height: 50px;
+      flex: 1;
+      border: 0;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 750;
+    }
+    button:disabled { cursor: not-allowed; opacity: .46; }
+    .primary { color: #fff; background: var(--green); }
+    .secondary { color: var(--ink); background: var(--green-soft); }
+    .card-head { justify-content: space-between; gap: 12px; }
+    .card-head h2 { margin: 0; font-size: 18px; }
+    .card-head span { color: var(--muted); font-size: 12px; }
+    .partial {
+      min-height: 62px;
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--green-soft);
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.55;
+    }
+    .partial.empty { color: #91a199; }
+    .final-list { display: grid; gap: 10px; margin-top: 12px; }
+    .final-item {
+      padding: 13px 14px;
+      border-left: 3px solid var(--green);
+      background: #fafcfb;
+      color: #2f4f42;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .empty-copy { margin: 18px 0 4px; color: #91a199; text-align: center; font-size: 14px; }
+    details { margin-top: 14px; }
+    summary { cursor: pointer; color: var(--muted); font-size: 13px; font-weight: 650; }
+    pre {
+      max-height: 230px;
+      overflow: auto;
+      margin: 12px 0 0;
+      padding: 13px;
+      border-radius: 14px;
+      background: #10241c;
+      color: #cce7d8;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .note { margin: 16px 4px 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    @media (max-width: 340px) {
+      .shell { padding-inline: 12px; }
+      .card { padding: 15px; border-radius: 18px; }
+      .actions { flex-direction: column; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 假设：此页只用于真实链路验收，不承载正式业务，也不读取或展示任何服务端密钥。 -->
+  <main class="shell">
+    <p class="eyebrow">BCI DEPLOYMENT CHECK</p>
+    <h1>流式字幕<br />链路测试</h1>
+    <p class="intro">真实验证浏览器麦克风、独立网关与百度实时语音识别。下面的事件日志来自 WebSocket 消息，不依赖业务页面状态文案。</p>
+
+    <section class="card" aria-labelledby="connection-title">
+      <div class="status-row">
+        <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+        <div class="status-copy">
+          <strong id="connection-title">尚未连接</strong>
+          <span id="statusDetail">点击开始后请求麦克风权限</span>
+        </div>
+      </div>
+      <label for="wsUrl">WebSocket 网关</label>
+      <input id="wsUrl" type="url" inputmode="url" spellcheck="false" autocomplete="off" />
+      <div class="metrics" aria-label="连接指标">
+        <div class="metric"><b id="elapsed">00:00</b><span>连接时长</span></div>
+        <div class="metric"><b id="midCount">0</b><span>MID_TEXT</span></div>
+        <div class="metric"><b id="finalCount">0</b><span>FIN_TEXT</span></div>
+      </div>
+      <div class="actions">
+        <button id="startButton" class="primary" type="button">开始识别</button>
+        <button id="stopButton" class="secondary" type="button" disabled>结束并提交</button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="subtitle-title">
+      <div class="card-head">
+        <h2 id="subtitle-title">实时字幕</h2>
+        <span>16 kHz · PCM</span>
+      </div>
+      <div id="partial" class="partial empty" aria-live="polite">讲话后，中间结果会显示在这里</div>
+      <div id="finalList" class="final-list"></div>
+      <p id="emptyFinal" class="empty-copy">尚无最终字幕</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>真实事件</h2>
+        <span id="lastEvent">等待连接</span>
+      </div>
+      <details open>
+        <summary>查看 WebSocket 与 ASR 日志</summary>
+        <pre id="eventLog">测试页已就绪</pre>
+      </details>
+    </section>
+
+    <p class="note">手机浏览器获取麦克风必须使用 HTTPS。部署 BCI 后请通过正式 HTTPS 域名打开本页；不要直接使用公网 IP 的 HTTP 地址进行手机测试。</p>
+  </main>
+
+  <script>
+    const TARGET_SAMPLE_RATE = 16000;
+    const FRAME_BYTES = 5120;
+    const MIN_FINAL_FRAME_BYTES = 640;
+    const elements = {
+      dot: document.querySelector('#statusDot'),
+      title: document.querySelector('#connection-title'),
+      detail: document.querySelector('#statusDetail'),
+      wsUrl: document.querySelector('#wsUrl'),
+      elapsed: document.querySelector('#elapsed'),
+      midCount: document.querySelector('#midCount'),
+      finalCount: document.querySelector('#finalCount'),
+      start: document.querySelector('#startButton'),
+      stop: document.querySelector('#stopButton'),
+      partial: document.querySelector('#partial'),
+      finalList: document.querySelector('#finalList'),
+      emptyFinal: document.querySelector('#emptyFinal'),
+      log: document.querySelector('#eventLog'),
+      lastEvent: document.querySelector('#lastEvent'),
+    };
+
+    const queryWs = new URLSearchParams(location.search).get('ws');
+    const defaultProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    elements.wsUrl.value = queryWs || `${defaultProtocol}//${location.host}/api/realtime-asr`;
+
+    let socket = null;
+    let stream = null;
+    let audioContext = null;
+    let source = null;
+    let processor = null;
+    let mutedOutput = null;
+    let pendingPcm = new Uint8Array(0);
+    let timer = null;
+    let startedAt = 0;
+    let mids = 0;
+    let finals = 0;
+    let terminalRequested = false;
+
+    function log(event, data = '') {
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      const detail = typeof data === 'string' ? data : JSON.stringify(data);
+      elements.log.textContent = `[${time}] ${event}${detail ? ` · ${detail}` : ''}\n${elements.log.textContent}`.slice(0, 12000);
+      elements.lastEvent.textContent = event;
+    }
+
+    function setStatus(title, detail, live = false) {
+      elements.title.textContent = title;
+      elements.detail.textContent = detail;
+      elements.dot.classList.toggle('live', live);
+    }
+
+    function resample(input, sourceRate) {
+      if (sourceRate === TARGET_SAMPLE_RATE) return input.slice();
+      const ratio = sourceRate / TARGET_SAMPLE_RATE;
+      const output = new Float32Array(Math.max(1, Math.floor(input.length / ratio)));
+      for (let i = 0; i < output.length; i += 1) {
+        const index = i * ratio;
+        const lower = Math.floor(index);
+        const upper = Math.min(lower + 1, input.length - 1);
+        output[i] = input[lower] * (1 - (index - lower)) + input[upper] * (index - lower);
+      }
+      return output;
+    }
+
+    function toPcm16(samples) {
+      const pcm = new Uint8Array(samples.length * 2);
+      const view = new DataView(pcm.buffer);
+      samples.forEach((raw, index) => {
+        const sample = Math.max(-1, Math.min(1, raw));
+        view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      });
+      return pcm;
+    }
+
+    function sendFrames(flush = false) {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
+      while (pendingPcm.byteLength >= FRAME_BYTES) {
+        socket.send(pendingPcm.slice(0, FRAME_BYTES));
+        pendingPcm = pendingPcm.slice(FRAME_BYTES);
+      }
+      if (flush && pendingPcm.byteLength >= MIN_FINAL_FRAME_BYTES) {
+        socket.send(pendingPcm);
+        pendingPcm = new Uint8Array(0);
+      }
+    }
+
+    function stopCapture() {
+      if (processor) processor.onaudioprocess = null;
+      try { source?.disconnect(); } catch {}
+      try { processor?.disconnect(); } catch {}
+      try { mutedOutput?.disconnect(); } catch {}
+      stream?.getTracks().forEach((track) => track.stop());
+      if (audioContext && audioContext.state !== 'closed') void audioContext.close();
+      stream = audioContext = source = processor = mutedOutput = null;
+    }
+
+    function resetControls() {
+      clearInterval(timer);
+      timer = null;
+      elements.start.disabled = false;
+      elements.stop.disabled = true;
+      stopCapture();
+    }
+
+    async function start() {
+      elements.start.disabled = true;
+      terminalRequested = false;
+      try {
+        const wsUrl = new URL(elements.wsUrl.value.trim());
+        if (!['ws:', 'wss:'].includes(wsUrl.protocol)) throw new Error('地址必须使用 ws:// 或 wss://');
+        setStatus('请求麦克风', '请在浏览器权限提示中选择允许');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false });
+        log('MIC_GRANTED');
+
+        setStatus('连接网关', wsUrl.host);
+        socket = new WebSocket(wsUrl);
+        socket.binaryType = 'arraybuffer';
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('WebSocket 连接超时')), 8000);
+          socket.onopen = () => { clearTimeout(timeout); resolve(); };
+          socket.onerror = () => { clearTimeout(timeout); reject(new Error('WebSocket 连接失败')); };
+        });
+        log('WS_OPEN', { url: wsUrl.toString() });
+
+        audioContext = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
+        await audioContext.resume();
+        source = audioContext.createMediaStreamSource(stream);
+        processor = audioContext.createScriptProcessor(2048, 1, 1);
+        mutedOutput = audioContext.createGain();
+        mutedOutput.gain.value = 0;
+        source.connect(processor);
+        processor.connect(mutedOutput);
+        mutedOutput.connect(audioContext.destination);
+        processor.onaudioprocess = (event) => {
+          if (socket?.readyState !== WebSocket.OPEN) return;
+          const pcm = toPcm16(resample(event.inputBuffer.getChannelData(0), audioContext.sampleRate));
+          const merged = new Uint8Array(pendingPcm.byteLength + pcm.byteLength);
+          merged.set(pendingPcm);
+          merged.set(pcm, pendingPcm.byteLength);
+          pendingPcm = merged;
+          sendFrames();
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const message = JSON.parse(String(event.data));
+            log(message.type || 'WS_MESSAGE', { err_no: message.err_no, result: message.result || '', err_msg: message.err_msg || '' });
+            if (message.type === 'MID_TEXT' && message.result) {
+              mids += 1;
+              elements.midCount.textContent = String(mids);
+              elements.partial.textContent = message.result;
+              elements.partial.classList.remove('empty');
+            }
+            if (message.type === 'FIN_TEXT') {
+              if (Number(message.err_no || 0) === -3005) return;
+              if (!message.result) return;
+              finals += 1;
+              elements.finalCount.textContent = String(finals);
+              elements.emptyFinal.hidden = true;
+              const item = document.createElement('div');
+              item.className = 'final-item';
+              item.textContent = message.result;
+              elements.finalList.prepend(item);
+              elements.partial.textContent = '继续讲话，等待下一句…';
+              elements.partial.classList.add('empty');
+            }
+            if (message.type === 'LOCAL_ERROR' || (message.err_no && message.err_no !== -3005)) {
+              setStatus('识别异常', message.err_msg || `错误 ${message.err_no}`, false);
+            }
+          } catch (error) {
+            log('INVALID_MESSAGE', error.message);
+          }
+        };
+        socket.onclose = (event) => {
+          log('WS_CLOSE', { code: event.code, reason: event.reason });
+          setStatus(terminalRequested ? '识别已结束' : '连接已中断', event.reason || `关闭码 ${event.code}`, false);
+          resetControls();
+        };
+        socket.onerror = () => log('WS_ERROR');
+
+        startedAt = Date.now();
+        timer = setInterval(() => {
+          const seconds = Math.floor((Date.now() - startedAt) / 1000);
+          elements.elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+        }, 1000);
+        elements.stop.disabled = false;
+        setStatus('正在流式识别', 'WebSocket 已连接，音频帧持续上传', true);
+      } catch (error) {
+        log('START_FAILED', error.message);
+        setStatus('启动失败', error.message, false);
+        socket?.close();
+        resetControls();
+      }
+    }
+
+    function stop() {
+      if (!socket) return;
+      terminalRequested = true;
+      stopCapture();
+      sendFrames(true);
+      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'FINISH' }));
+      setStatus('正在结束', '等待百度返回最后一句字幕', true);
+      elements.stop.disabled = true;
+      log('FINISH_SENT');
+      setTimeout(() => {
+        if (socket?.readyState === WebSocket.OPEN) socket.close(1000, 'test complete');
+      }, 5000);
+    }
+
+    elements.start.addEventListener('click', start);
+    elements.stop.addEventListener('click', stop);
+    window.addEventListener('beforeunload', () => {
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'CANCEL' }));
+      stopCapture();
+    });
+  </script>
+</body>
+</html>

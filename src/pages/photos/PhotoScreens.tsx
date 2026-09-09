@@ -1,15 +1,28 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   CalendarDays, Filter, ChevronDown, Download, Share2, Star,
-  Plus, Upload as UploadIcon, QrCode, ChevronRight, CircleDot
+  Plus, Upload as UploadIcon, Search, ChevronRight, CircleDot, Images
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/db/supabase';
 import { fetchPhotosSafe } from '@/api/photosSecure';
 import { uploadPhoto, toggleFavorite, fetchFavorites } from '@/api/photos';
-import { fetchActiveRooms } from '@/api/rooms';
+import { fetchActiveRooms, fetchRoomById } from '@/api/rooms';
 import type { Photo, Room } from '@/types/types';
 import { toast } from 'sonner';
 import { BottomNav } from '@/pages/guide/GuideScreens';
+import { useRoomPresence } from '@/hooks/use-room-presence';
+import {
+  formatFileSize,
+  prepareImageForUpload,
+  readUploadQuality,
+  UPLOAD_QUALITY_OPTIONS,
+  type UploadQuality,
+} from '@/lib/imageCompression';
+import {
+  getUploadNetworkState,
+  isWifiOnlyUploadEnabled,
+} from '@/lib/networkPreferences';
 
 interface Props { go: (id: string) => void }
 
@@ -105,7 +118,7 @@ export function PhotoDetail({ go }: Props) {
         <button className="back-button" onClick={() => go('album')} aria-label="返回" style={{ color: '#fff' }}>
           <span className="back-chevron" style={{ borderColor: '#fff' }} />
         </button>
-        <strong style={{ color: '#fff' }}>{idx + 1} / {photos.length}</strong>
+        <strong style={{ color: '#fff' }}>{photo ? idx + 1 : 0} / {photos.length}</strong>
         <span />
       </div>
 
@@ -118,7 +131,11 @@ export function PhotoDetail({ go }: Props) {
           marginTop: 20,
         }} />
       ) : (
-        <div className="detail-group-photo" />
+        <div className="photo-detail-empty" role="status">
+          <Images size={42} />
+          <strong>照片暂时不可用</strong>
+          <span>请返回相册刷新后重试</span>
+        </div>
       )}
 
       <div className="photo-info">
@@ -129,13 +146,13 @@ export function PhotoDetail({ go }: Props) {
       </div>
 
       <div className="photo-actions">
-        <button onClick={() => photo && window.open(photo.url, '_blank')}>
+        <button disabled={!photo} onClick={() => photo && window.open(photo.url, '_blank')}>
           <Download /><span>保存</span>
         </button>
-        <button onClick={() => { if (photo) { navigator.clipboard.writeText(photo.url); toast.success('链接已复制'); } }}>
+        <button disabled={!photo} onClick={() => { if (photo) { navigator.clipboard.writeText(photo.url); toast.success('链接已复制'); } }}>
           <Share2 /><span>分享</span>
         </button>
-        <button onClick={handleFav} style={{ color: photo && favIds.has(photo.id) ? '#f6a900' : undefined }}>
+        <button disabled={!photo} onClick={handleFav} style={{ color: photo && favIds.has(photo.id) ? '#f6a900' : undefined }}>
           <Star /><span>{photo && favIds.has(photo.id) ? '已收藏' : '收藏'}</span>
         </button>
       </div>
@@ -187,11 +204,11 @@ export function PhotographerHome({ go }: Props) {
         </div>
       )}
 
-      <button className="scan-room">
-        <span><QrCode /></span>
+      <button className="scan-room" onClick={() => go('photo-join')}>
+        <span><Search /></span>
         <p>
-          <strong>扫码加入房间</strong>
-          <small>扫描导游提供的房间二维码</small>
+          <strong>输入房间号加入</strong>
+          <small>输入房间密码后直接加入</small>
         </p>
         <b><ChevronRight /></b>
       </button>
@@ -204,46 +221,175 @@ export function PhotographerHome({ go }: Props) {
 // ─── 照片上传 ─────────────────────────────────────────
 interface UploadItem {
   file: File;
-  state: 'pending' | 'uploading' | 'done' | 'failed';
+  state: 'pending' | 'processing' | 'uploading' | 'done' | 'failed';
   progress: number;
   url?: string;
+  uploadSize?: number;
+  compressed?: boolean;
 }
 
 export function Upload({ go }: Props) {
-  const { user, currentRoom } = useAuth();
+  const { user, currentRoom, setCurrentRoom } = useAuth();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [access, setAccess] = useState<'checking' | 'approved' | 'blocked'>('checking');
+  const [accessMessage, setAccessMessage] = useState('');
+  const [quality, setQuality] = useState<UploadQuality>(() => readUploadQuality());
   const fileRef = useRef<HTMLInputElement>(null);
+  const { trackPresence, untrackPresence } = useRoomPresence();
+
+  useEffect(() => {
+    if (access !== 'approved') return;
+    trackPresence();
+    return () => { void untrackPresence(); };
+  }, [access, trackPresence, untrackPresence]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!user || !currentRoom) {
+      setAccess('blocked');
+      setAccessMessage('请先从拍摄任务中选择一个房间');
+      return;
+    }
+
+    (async () => {
+      setAccess('checking');
+      const [{ data, error }, latestRoom] = await Promise.all([
+        supabase
+          .from('memberships')
+          .select('approval_status,left_at')
+          .eq('room_id', currentRoom.id)
+          .eq('user_id', user.id)
+          .eq('role', 'photographer')
+          .maybeSingle(),
+        fetchRoomById(currentRoom.id),
+      ]);
+      if (!mounted) return;
+
+      if (latestRoom) setCurrentRoom(latestRoom);
+      if (error || !data) {
+        setAccess('blocked');
+        setAccessMessage('没有找到该房间的摄影任务，请返回任务列表重新进入');
+        return;
+      }
+      if (data.approval_status !== 'approved' || data.left_at) {
+        setAccess('blocked');
+        setAccessMessage(data.approval_status === 'pending'
+          ? '请重新输入房间密码，验证后即可上传照片'
+          : '该摄影任务目前没有上传权限');
+        return;
+      }
+      if ((latestRoom ?? currentRoom).status === 'ended') {
+        setAccess('blocked');
+        setAccessMessage('本次讲解已经结束，不能继续上传照片');
+        return;
+      }
+      setAccess('approved');
+      setAccessMessage('');
+    })();
+
+    return () => { mounted = false; };
+  }, [currentRoom?.id, user?.id, setCurrentRoom]);
 
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newItems: UploadItem[] = files.map(f => ({ file: f, state: 'pending', progress: 0 }));
+    const maxSourceSize = quality === 'original' ? 20 : 50;
+    const validFiles = files.filter(file => (
+      (/^image\/(jpeg|png|webp)$/i.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name))
+      && file.size <= maxSourceSize * 1024 * 1024
+    ));
+    const rejectedCount = files.length - validFiles.length;
+    if (rejectedCount > 0) {
+      toast.error(`${rejectedCount} 张照片格式不支持或超过 ${maxSourceSize}MB`);
+    }
+    const newItems: UploadItem[] = validFiles.map(f => ({ file: f, state: 'pending', progress: 0 }));
     setItems(prev => [...prev, ...newItems]);
+    e.target.value = '';
+  };
+
+  const selectQuality = (nextQuality: UploadQuality) => {
+    setQuality(nextQuality);
+    localStorage.setItem('shiguang-upload-quality', nextQuality);
   };
 
   const handleUpload = async () => {
-    if (!currentRoom || !user) { toast.error('请先加入房间'); return; }
+    if (access !== 'approved' || !currentRoom || !user) {
+      toast.error(accessMessage || '当前房间没有照片上传权限');
+      return;
+    }
+    if (!navigator.onLine) {
+      toast.error('当前设备离线，请联网后重试');
+      return;
+    }
+    const networkState = getUploadNetworkState();
+    const wifiOnly = isWifiOnlyUploadEnabled();
+    if (wifiOnly && !networkState.allowed) {
+      toast.error(networkState.reason ?? '当前网络不是 Wi-Fi');
+      return;
+    }
+    if (wifiOnly && !networkState.detectable) {
+      toast.warning('当前浏览器无法识别 Wi-Fi，已继续上传，请留意流量使用');
+    }
     setBusy(true);
     const pending = items.filter(i => i.state === 'pending');
-    for (let i = 0; i < pending.length; i++) {
-      const item = pending[i];
-      setItems(prev => prev.map(p => p.file === item.file ? { ...p, state: 'uploading', progress: 30 } : p));
-      const { photo, error } = await uploadPhoto(currentRoom.id, user.id, item.file);
-      if (error || !photo) {
-        setItems(prev => prev.map(p => p.file === item.file ? { ...p, state: 'failed', progress: 0 } : p));
-        toast.error(`${item.file.name} 上传失败`);
-      } else {
-        setItems(prev => prev.map(p => p.file === item.file ? { ...p, state: 'done', progress: 100, url: photo.url } : p));
+    let successCount = 0;
+    let failedCount = 0;
+    try {
+      for (let i = 0; i < pending.length; i++) {
+        const item = pending[i];
+        setItems(prev => prev.map(p => (
+          p.file === item.file ? { ...p, state: 'processing', progress: 15 } : p
+        )));
+        let prepared;
+        try {
+          prepared = await prepareImageForUpload(item.file, quality);
+        } catch (error) {
+          failedCount += 1;
+          const message = error instanceof Error ? error.message : '图片处理失败';
+          setItems(prev => prev.map(p => (
+            p.file === item.file ? { ...p, state: 'failed', progress: 0 } : p
+          )));
+          toast.error(`${item.file.name}：${message}`);
+          continue;
+        }
+        setItems(prev => prev.map(p => (
+          p.file === item.file
+            ? {
+              ...p,
+              state: 'uploading',
+              progress: 45,
+              uploadSize: prepared.file.size,
+              compressed: prepared.compressed,
+            }
+            : p
+        )));
+        try {
+          const { photo, error } = await uploadPhoto(currentRoom.id, user.id, prepared.file);
+          if (error || !photo) {
+            failedCount += 1;
+            setItems(prev => prev.map(p => p.file === item.file ? { ...p, state: 'failed', progress: 0 } : p));
+            toast.error(`${item.file.name} 上传失败：${error ?? '服务未返回照片记录'}`);
+          } else {
+            successCount += 1;
+            setItems(prev => prev.map(p => p.file === item.file ? { ...p, state: 'done', progress: 100, url: photo.url } : p));
+          }
+        } catch (error) {
+          failedCount += 1;
+          const message = error instanceof Error ? error.message : '网络请求异常';
+          setItems(prev => prev.map(p => p.file === item.file ? { ...p, state: 'failed', progress: 0 } : p));
+          toast.error(`${item.file.name} 上传失败：${message}`);
+        }
       }
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    if (items.every(i => i.state === 'done' || i.state === 'failed')) {
-      toast.success('上传完成');
-    }
+    if (successCount > 0 && failedCount === 0) toast.success(`${successCount} 张照片上传完成`);
+    else if (successCount > 0) toast.warning(`${successCount} 张上传成功，${failedCount} 张失败`);
+    else if (failedCount > 0) toast.error(`${failedCount} 张照片上传失败，可点击重试`);
   };
 
   return (
-    <div className="screen padded-screen">
+    <div className="screen padded-screen upload-screen">
       <div className="mini-header">
         <button className="back-button" onClick={() => go('photographer-tasks')} aria-label="返回">
           <span className="back-chevron" />
@@ -253,16 +399,54 @@ export function Upload({ go }: Props) {
       </div>
 
       <div className="upload-zone-wrap">
-        <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 12 }}>
-          {currentRoom ? `当前任务：${currentRoom.name}` : '未选择房间'}
-        </p>
-        <button className="upload-zone" onClick={() => fileRef.current?.click()}>
-          <span><Plus /></span>
-          <strong>选择照片</strong>
-          <small>支持 JPG / PNG，单张不超过 20MB</small>
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleSelect} />
+        <div className="upload-task-context">
+          <span>当前任务</span>
+          <strong>{currentRoom?.name ?? '未选择房间'}</strong>
+          {currentRoom && <small>房间号 {currentRoom.room_number}</small>}
+        </div>
+        {access === 'checking' ? (
+          <div className="loading-state"><div className="spinner" /><span>检查上传权限中…</span></div>
+        ) : access === 'blocked' ? (
+          <div className="empty-state">
+            <Images size={36} className="empty-icon" />
+            <p className="empty-title">暂时不能上传</p>
+            <small className="empty-desc">{accessMessage}</small>
+          </div>
+        ) : (
+          <>
+            <button className="upload-zone" onClick={() => fileRef.current?.click()}>
+              <span><Plus /></span>
+              <strong>选择照片</strong>
+              <small>{quality === 'original' ? '原图单张不超过 20MB' : '源文件单张不超过 50MB'}</small>
+            </button>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple style={{ display: 'none' }} onChange={handleSelect} />
+          </>
+        )}
       </div>
+
+      {access === 'approved' && (
+        <section className="upload-quality-card" aria-labelledby="upload-quality-title">
+          <div className="upload-quality-heading">
+            <strong id="upload-quality-title">上传画质</strong>
+            <span>本次选择会自动保存</span>
+          </div>
+          <div className="upload-quality-options">
+            {UPLOAD_QUALITY_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                type="button"
+                className={quality === option.value ? 'active' : ''}
+                aria-pressed={quality === option.value}
+                onClick={() => selectQuality(option.value)}
+                disabled={busy}
+              >
+                <strong>{option.label}</strong>
+                <small>{option.description}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {items.length > 0 && (
         <div className="upload-list">
@@ -280,13 +464,21 @@ export function Upload({ go }: Props) {
                 <strong style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {item.file.name}
                 </strong>
-                {item.state === 'uploading' && (
+                {(item.state === 'processing' || item.state === 'uploading') && (
                   <div style={{ height: 4, background: '#dce9e0', borderRadius: 2, overflow: 'hidden', marginTop: 4 }}>
                     <div style={{ height: '100%', width: `${item.progress}%`, background: 'var(--green)', transition: 'width .3s' }} />
                   </div>
                 )}
                 <small style={{ color: 'var(--muted)', fontSize: 11 }}>
-                  {item.state === 'pending' ? '待上传' : item.state === 'uploading' ? '上传中…' : item.state === 'done' ? '✓ 已上传' : '✗ 上传失败'}
+                  {item.state === 'pending'
+                    ? `${formatFileSize(item.file.size)} · 待上传`
+                    : item.state === 'processing'
+                      ? '正在按所选画质处理…'
+                      : item.state === 'uploading'
+                        ? `${item.compressed ? '已压缩 · ' : ''}${formatFileSize(item.uploadSize ?? item.file.size)} · 上传中…`
+                        : item.state === 'done'
+                          ? `✓ 已上传 · ${formatFileSize(item.uploadSize ?? item.file.size)}`
+                          : '✗ 上传失败'}
                 </small>
               </div>
               {item.state === 'failed' && (
@@ -299,8 +491,8 @@ export function Upload({ go }: Props) {
         </div>
       )}
 
-      <button className="primary-button green" onClick={handleUpload} disabled={busy || items.filter(i => i.state === 'pending').length === 0}>
-        {busy ? '上传中…' : `继续上传（${items.filter(i => i.state === 'pending').length} 张）`}
+      <button className="primary-button green" onClick={handleUpload} disabled={access !== 'approved' || busy || items.filter(i => i.state === 'pending').length === 0}>
+        {busy ? '上传中…' : `开始上传（${items.filter(i => i.state === 'pending').length} 张）`}
       </button>
       <button className="manage-history" onClick={() => go('photographer-tasks')}>返回任务列表</button>
     </div>
